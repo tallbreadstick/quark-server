@@ -1,0 +1,1 @@
+# Quark - STEM Education Platform
