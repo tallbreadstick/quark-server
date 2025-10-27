@@ -9,10 +9,6 @@ import java.util.List;
 @Entity
 @Table(name = "activities")
 public class Activity {
-
-<<<<<<< HEAD
-}
-=======
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -88,4 +84,3 @@ public class Activity {
         this.updatedAt = LocalDateTime.now();
     }
 }
->>>>>>> ec29d07b7d41bd67b083c8f81ea2ed273a0d19ed
