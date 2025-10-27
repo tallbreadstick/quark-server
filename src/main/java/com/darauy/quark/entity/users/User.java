@@ -1,10 +1,14 @@
 package com.darauy.quark.entity.users;
 
+import com.darauy.quark.entity.achievements.UserBadge;
+import com.darauy.quark.entity.achievements.UserCertificate;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "users") // Changed to plural for convention
+@Table(name = "users")
 public class User {
 
     @Id
@@ -23,22 +27,27 @@ public class User {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Column(nullable = false, length = 255) // Long enough for Argon2 hash
+    @Column(nullable = false, length = 255)
     private String password;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private UserType userType;
 
-    // Additional fields for better user management
     @Column(nullable = false)
-    private Boolean isActive = true; // Default to active
+    private Boolean isActive = true;
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @Column(nullable = false)
     private LocalDateTime updatedAt;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserBadge> userBadges = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserCertificate> userCertificates = new HashSet<>();
 
     // Enum for user type
     public enum UserType {
@@ -141,6 +150,22 @@ public class User {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Set<UserBadge> getUserBadges() {
+        return userBadges;
+    }
+
+    public void setUserBadges(Set<UserBadge> userBadges) {
+        this.userBadges = userBadges;
+    }
+
+    public Set<UserCertificate> getUserCertificates() {
+        return userCertificates;
+    }
+
+    public void setUserCertificates(Set<UserCertificate> userCertificates) {
+        this.userCertificates = userCertificates;
     }
 
     // Automatically set createdAt and updatedAt
