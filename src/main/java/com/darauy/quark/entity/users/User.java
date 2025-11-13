@@ -2,6 +2,7 @@ package com.darauy.quark.entity.users;
 
 import com.darauy.quark.entity.achievements.UserBadge;
 import com.darauy.quark.entity.achievements.UserCertificate;
+import com.darauy.quark.entity.courses.UserCourse;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -51,6 +52,9 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<UserCertificate> userCertificates = new HashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserCourse> userCourses = new HashSet<>();
 
     // Enum for user type
     public enum UserType {

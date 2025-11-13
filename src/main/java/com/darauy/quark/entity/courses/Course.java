@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "courses")
@@ -27,6 +29,9 @@ public class Course {
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("orderIndex")
     private List<Chapter> chapters = new ArrayList<>();
+
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<UserCourse> userCourses = new HashSet<>();
 
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -57,6 +62,8 @@ public class Course {
     public void setTags(List<String> tags) { this.tags = tags; }
     public List<Chapter> getChapters() { return chapters; }
     public void setChapters(List<Chapter> chapters) { this.chapters = chapters; }
+    public Set<UserCourse> getUserCourses() { return userCourses; }
+    public void setUserCourses(Set<UserCourse> userCourses) { this.userCourses = userCourses; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
