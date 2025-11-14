@@ -1,88 +1,40 @@
 package com.darauy.quark.entity.users;
 
-import com.darauy.quark.entity.achievements.UserBadge;
-import com.darauy.quark.entity.achievements.UserCertificate;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
-@Data
 @Entity
 @Table(name = "users")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(length = 30, nullable = false, unique = true)
     private String username;
 
-    @Column(length = 50)
-    private String firstName;
-
-    @Column(length = 50)
-    private String lastName;
-
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(length = 255, nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, length = 255)
+    @Column(length = 128, nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserType userType;
+    @Column(name = "user_type", nullable = false, length = 16)
+    private String userType; // Should be "Educator" or "Learner"
 
-    @Column(nullable = false)
-    private Boolean isActive = true;
-
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<UserBadge> userBadges = new HashSet<>();
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<UserCertificate> userCertificates = new HashSet<>();
-
-    // Enum for user type
-    public enum UserType {
-        STUDENT,
-        EDUCATOR
-    }
-
-    // Constructors
-    public User() {
-    }
-
-    public User(String username, String firstName, String lastName, String email, String password, UserType userType) {
-        this.username = username;
-        this.firstName = firstName;
-        this.lastName = lastName;
-        this.email = email;
-        this.password = password;
-        this.userType = userType;
-        this.isActive = true;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    // Automatically set createdAt and updatedAt
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    // --- Relation: One user → one Profile ---
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private Profile profile;
 }
