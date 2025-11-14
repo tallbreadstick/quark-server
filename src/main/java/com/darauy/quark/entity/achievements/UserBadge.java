@@ -3,7 +3,8 @@ package com.darauy.quark.entity.achievements;
 import com.darauy.quark.entity.users.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import com.darauy.quark.entity.achievement.Badge;
+import com.darauy.quark.entity.achievements.Badge;
+
 @Entity
 @Table(name = "user_badges")
 public class UserBadge {

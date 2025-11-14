@@ -21,7 +21,7 @@ public class Lesson {
     private String name;
 
     @Column(nullable = false)
-    private Integer index;
+    private Integer number;
 
     @Column(length = 255)
     private String description; // nullable
