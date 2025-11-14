@@ -2,81 +2,50 @@ package com.darauy.quark.entity.courses;
 
 import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.lesson.Lesson;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import lombok.*;
+
+import java.util.Set;
 
 @Entity
 @Table(name = "chapters")
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Chapter {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
 
-    @Column(nullable = false, length = 100)
-    private String title;
+    @Column(length = 255, nullable = false)
+    private String name;
 
     @Column(nullable = false)
-    private Integer orderIndex;
+    private Integer number;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @Column(length = 255)
+    private String description; // nullable
+
+    @Column(length = 100)
+    private String icon; // nullable
+
+    // ------------------- Relationships -------------------
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
+    @JsonBackReference
     private Course course;
 
+    // Future-proofing for Lessons & Activities
     @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("orderIndex")
-    private List<Lesson> lessons = new ArrayList<>();
+    @JsonManagedReference
+    private Set<Lesson> lessons;
 
     @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
-    @OrderBy("orderIndex")
-    private List<Activity> activities = new ArrayList<>();
-
-    @Column(nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(nullable = false)
-    private LocalDateTime updatedAt;
-
-    // Constructors
-    public Chapter() {
-    }
-
-    public Chapter(String title, Integer orderIndex, Course course) {
-        this.title = title;
-        this.orderIndex = orderIndex;
-        this.course = course;
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
-    public String getTitle() { return title; }
-    public void setTitle(String title) { this.title = title; }
-    public Integer getOrderIndex() { return orderIndex; }
-    public void setOrderIndex(Integer orderIndex) { this.orderIndex = orderIndex; }
-    public Course getCourse() { return course; }
-    public void setCourse(Course course) { this.course = course; }
-    public List<Lesson> getLessons() { return lessons; }
-    public void setLessons(List<Lesson> lessons) { this.lessons = lessons; }
-    public List<Activity> getActivities() { return activities; }
-    public void setActivities(List<Activity> activities) { this.activities = activities; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-    public LocalDateTime getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
-
-    @PrePersist
-    protected void onCreate() {
-        this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        this.updatedAt = LocalDateTime.now();
-    }
+    @JsonManagedReference
+    private Set<Activity> activities;
 }
