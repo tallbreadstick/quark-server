@@ -25,7 +25,7 @@ public class User {
     private String email;
 
     @Column(length = 128, nullable = false)
-    private String password;
+    private String password; // argon2 hash
 
     @Column(name = "user_type", nullable = false, length = 16)
     private String userType; // Should be "Educator" or "Learner"
