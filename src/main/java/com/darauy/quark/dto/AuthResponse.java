@@ -15,4 +15,6 @@ public class AuthResponse {
     private String email;
     private String userType;
     private String message;
+    private String token;
+    private Long expiration;
 }
