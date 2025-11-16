@@ -3,7 +3,7 @@ package com.darauy.quark.entity.achievements;
 import com.darauy.quark.entity.users.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import com.darauy.quark.entity.achievement.Certificate;
+import com.darauy.quark.entity.achievements.Certificate;
 
 @Entity
 @Table(name = "user_certificates")

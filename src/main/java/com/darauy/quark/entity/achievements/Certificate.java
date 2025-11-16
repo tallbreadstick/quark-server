@@ -1,4 +1,4 @@
-package com.darauy.quark.entity.achievement;
+package com.darauy.quark.entity.achievements;
 
 import com.darauy.quark.entity.achievements.UserCertificate;
 import jakarta.persistence.*;
