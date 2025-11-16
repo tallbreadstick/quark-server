@@ -26,6 +26,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
  * 7. Allow request to proceed or return 401 Unauthorized
  * 
  * Public Endpoints (no JWT required):
+ * - OPTIONS requests (CORS preflight requests)
  * - /api/auth/** (all authentication endpoints)
  * - GET /api/tags (fetch all tags for course creation)
  * - GET /api/tags/{id} (fetch tag by ID)
@@ -70,6 +71,11 @@ public class JwtInterceptor implements HandlerInterceptor {
         // Skip JWT validation for public endpoints
         String path = request.getRequestURI();
         String method = request.getMethod();
+        
+        // Allow OPTIONS requests (CORS preflight) without authentication
+        if ("OPTIONS".equals(method)) {
+            return true;
+        }
         
         // Public endpoints: auth endpoints and GET requests to tags
         if (path.startsWith("/api/auth/")) {

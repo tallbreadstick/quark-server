@@ -11,7 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 
  * This configuration class sets up:
  * 1. CORS (Cross-Origin Resource Sharing) settings
- *    - Allows requests from frontend (localhost:5173)
+ *    - Allows requests from all origins (for testing)
  *    - Enables credentials (cookies, authorization headers)
  *    - Allows all HTTP methods and headers
  * 
@@ -20,9 +20,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *    - Interceptor validates JWT tokens before controller execution
  * 
  * CORS Configuration:
- * - Frontend origin: http://localhost:5173 (Vite dev server)
- * - Allowed methods: GET, POST, PUT, PATCH, DELETE, OPTIONS
+ * - All origins allowed for testing (allowedOriginPatterns: "*")
+ * - Allowed methods: GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD
+ * - All headers allowed
  * - Credentials enabled for JWT token transmission
+ * - Preflight cache: 3600 seconds
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
@@ -33,18 +35,22 @@ public class WebConfig implements WebMvcConfigurer {
     /**
      * Configures CORS settings for API endpoints.
      * 
-     * Allows cross-origin requests from the frontend application
-     * running on localhost:5173 (typical Vite dev server port).
+     * Allows cross-origin requests from any origin for testing purposes.
+     * This configuration enables all origins, methods, and headers to prevent
+     * CORS issues during development and testing.
+     * 
+     * Note: For production, consider restricting allowedOrigins to specific domains.
      * 
      * @param registry CORS registry to configure
      */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:5173")
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+                .allowedOriginPatterns("*")  // Allows all origins for testing
+                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD")
                 .allowedHeaders("*")
-                .allowCredentials(true);
+                .allowCredentials(true)
+                .maxAge(3600);  // Cache preflight requests for 1 hour
     }
 
     /**

@@ -56,13 +56,14 @@ public class CourseService {
      * Creates a new course with optional tags and relationships.
      * 
      * Creation Pipeline:
-     * 1. Validate required fields (name, version)
+     * 1. Validate required fields (name)
      * 2. Retrieve user from database using userId (from JWT token)
      * 3. Build Course entity with required and optional fields
-     * 4. Handle origin course relationship if originId is provided
-     * 5. Save course to get generated ID
-     * 6. Create CourseTag relationships if tagIds are provided
-     * 7. Save course again with tag relationships
+     * 4. Set version to 1 (internal metadata, not user-provided)
+     * 5. Handle origin course relationship if originId is provided
+     * 6. Save course to get generated ID
+     * 7. Create CourseTag relationships if tagIds are provided
+     * 8. Save course again with tag relationships
      * 
      * Note: Tags must be linked after course is saved because CourseTagId
      * requires the course ID, which is only available after persistence.
@@ -77,9 +78,6 @@ public class CourseService {
         if (courseRequest.getName() == null || courseRequest.getName().trim().isEmpty()) {
             throw new IllegalArgumentException("Name is required");
         }
-        if (courseRequest.getVersion() == null) {
-            throw new IllegalArgumentException("Version is required");
-        }
 
         // Get owner from JWT userId
         Optional<User> owner = userRepository.findById(userId);
@@ -91,7 +89,7 @@ public class CourseService {
                 .name(courseRequest.getName())
                 .description(courseRequest.getDescription()) // nullable
                 .introduction(courseRequest.getIntroduction()) // nullable
-                .version(courseRequest.getVersion())
+                .version(1) // Internal metadata: always start at version 1
                 .owner(owner.get())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -134,20 +132,28 @@ public class CourseService {
     /**
      * Retrieves a course by its ID.
      * 
+     * Uses a custom query with fetch join to eagerly load the owner relationship,
+     * preventing LazyInitializationException during JSON serialization.
+     * 
      * @param id Course ID to retrieve
      * @return Course entity if found, null otherwise
      */
+    @Transactional(readOnly = true)
     public Course getCourseById(Integer id) {
-        return courseRepository.findById(id).orElse(null);
+        return courseRepository.findByIdWithOwner(id).orElse(null);
     }
 
     /**
      * Retrieves all courses from the database.
      * 
-     * @return List of all Course entities
+     * Uses a custom query with fetch join to eagerly load the owner relationship,
+     * preventing LazyInitializationException during JSON serialization.
+     * 
+     * @return List of all Course entities with owner loaded
      */
+    @Transactional(readOnly = true)
     public List<Course> getAllCourses() {
-        return courseRepository.findAll();
+        return courseRepository.findAllWithOwner();
     }
 
     /**
@@ -162,16 +168,20 @@ public class CourseService {
      *    - Nullable fields can be set to null
      *    - Tag updates replace all existing tags
      *    - Origin can be set or cleared
-     * 6. Update timestamp
-     * 7. Save and return updated course
+     *    - Version is automatically incremented (internal metadata)
+     * 6. Increment version (internal metadata management)
+     * 7. Update timestamp
+     * 8. Save and return updated course
      * 
      * Supported update fields:
      * - name: Course name
      * - description: Course description (nullable)
      * - introduction: Course introduction text (nullable)
-     * - version: Course version number
      * - originId: ID of origin course (nullable, for course derivation)
      * - tagIds: List of tag IDs to associate with course (replaces existing tags)
+     * 
+     * Note: The version field is managed internally and is automatically
+     * incremented on each update. User-provided version values are ignored.
      * 
      * @param id Course ID to update
      * @param updates Map of field names to new values (partial update)
@@ -214,10 +224,10 @@ public class CourseService {
                         course.setIntroduction(null);
                     }
                     break;
+                // Version is managed internally - automatically incremented on update
+                // Do not allow version to be set via PATCH request
                 case "version":
-                    if (value != null) {
-                        course.setVersion((Integer) value);
-                    }
+                    // Ignore version updates from user - it's managed internally
                     break;
                 case "originId":
                     if (value != null) {
@@ -260,6 +270,8 @@ public class CourseService {
             }
         });
 
+        // Increment version on update (internal metadata management)
+        course.setVersion(course.getVersion() + 1);
         course.setUpdatedAt(LocalDateTime.now());
         return courseRepository.save(course);
     }

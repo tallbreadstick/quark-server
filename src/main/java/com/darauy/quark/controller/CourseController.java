@@ -34,7 +34,6 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/api/course")
-@CrossOrigin(origins = "http://localhost:5173")
 public class CourseController {
 
     @Autowired
@@ -57,9 +56,11 @@ public class CourseController {
      * - name: Course name (required)
      * - description: Course description (optional)
      * - introduction: Course introduction text (optional)
-     * - version: Course version number (required)
      * - originId: ID of origin course for derivation (optional)
      * - tagIds: List of tag IDs to associate (optional)
+     * 
+     * Note: The version field is managed internally and defaults to 1 on creation.
+     * It is automatically incremented on each update (PATCH request).
      * 
      * Response:
      * - 201 CREATED: Created Course entity
@@ -152,9 +153,11 @@ public class CourseController {
      * - name: Course name (optional)
      * - description: Course description (optional, can be null)
      * - introduction: Course introduction (optional, can be null)
-     * - version: Course version (optional)
      * - originId: Origin course ID (optional, can be null)
      * - tagIds: List of tag IDs (optional, replaces existing tags)
+     * 
+     * Note: The version field is managed internally and is automatically
+     * incremented on each update. User-provided version values are ignored.
      * 
      * Response:
      * - 200 OK: Updated Course entity

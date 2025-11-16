@@ -1,5 +1,6 @@
 package com.darauy.quark.entity.users;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
@@ -25,6 +26,7 @@ public class User {
     private String email;
 
     @Column(length = 128, nullable = false)
+    @JsonIgnore  // Never serialize password in JSON responses
     private String password; // argon2 hash
 
     @Column(name = "user_type", nullable = false, length = 16)
@@ -35,6 +37,6 @@ public class User {
 
     // --- Relation: One user → one Profile ---
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JsonManagedReference
+    @JsonIgnore  // Don't serialize profile in course listings to avoid lazy loading issues
     private Profile profile;
 }

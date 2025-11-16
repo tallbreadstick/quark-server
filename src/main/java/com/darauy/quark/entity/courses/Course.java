@@ -3,6 +3,7 @@ package com.darauy.quark.entity.courses;
 import com.darauy.quark.entity.users.User;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -58,4 +59,15 @@ public class Course {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+    
+    /**
+     * Returns the owner's ID for JSON serialization.
+     * This allows the frontend to access ownerId directly.
+     * 
+     * @return The ID of the course owner, or null if owner is not loaded
+     */
+    @JsonProperty("ownerId")
+    public Integer getOwnerId() {
+        return owner != null ? owner.getId() : null;
+    }
 }

@@ -15,7 +15,6 @@ import java.util.List;
  * 
  * Required Fields:
  * - name: Course name (cannot be null or empty)
- * - version: Course version number (cannot be null)
  * 
  * Optional Fields (nullable):
  * - description: Course description text
@@ -23,9 +22,12 @@ import java.util.List;
  * - originId: ID of the course this course is derived from
  * - tagIds: List of tag IDs to associate with the course
  * 
- * Note: The course owner (userId) is extracted from the JWT token
- * in the controller, not from this DTO. This ensures security by
- * preventing users from creating courses for other users.
+ * Note: 
+ * - The course owner (userId) is extracted from the JWT token
+ *   in the controller, not from this DTO. This ensures security by
+ *   preventing users from creating courses for other users.
+ * - The version field is managed internally and defaults to 1 on creation.
+ *   It is automatically incremented on each update (PATCH request).
  */
 @Data
 @Builder
@@ -40,9 +42,6 @@ public class CourseRequest {
     
     /** Course introduction/overview text (optional, nullable, TEXT type) */
     private String introduction;
-    
-    /** Course version number (required) */
-    private Integer version;
     
     /** ID of the origin course if this is a derived course (optional, nullable) */
     private Integer originId;
