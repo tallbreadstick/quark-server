@@ -1,17 +1,18 @@
 package com.darauy.quark.entity.courses;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Set;
-
 @Entity
-@Table(name = "tags")
+@Table(name = "tags",
+        indexes = {
+                @Index(name = "idx_tag_name", columnList = "name", unique = true)
+        }
+)
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Tag {
 
     @Id
@@ -20,8 +21,4 @@ public class Tag {
 
     @Column(length = 50, nullable = false, unique = true)
     private String name;
-
-    @OneToMany(mappedBy = "tag", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private Set<CourseTag> courses;
 }

@@ -1,33 +1,34 @@
 package com.darauy.quark.controller;
 
-import com.darauy.quark.entity.courses.Chapter;
-import com.darauy.quark.service.ChapterService;
+import com.darauy.quark.entity.courses.activity.Activity;
+import com.darauy.quark.security.JwtUtil;
+import com.darauy.quark.service.ActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
-public class ChapterController {
+public class ActivityController {
 
-    private final ChapterService chapterService;
+    private final ActivityService activityService;
+    private final JwtUtil jwtUtil;
 
-    // ------------------ Add Chapter ------------------
-    @PostMapping("/course/{courseId}/chapter")
-    public ResponseEntity<?> addChapter(
-            @PathVariable Integer courseId,
-            @RequestBody Chapter chapter,
+    // ------------------ Add Activity ------------------
+    @PostMapping("/chapter/{chapterId}/activity")
+    public ResponseEntity<?> addActivity(
+            @PathVariable Integer chapterId,
+            @RequestBody Activity activity,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            Chapter saved = chapterService.addChapter(courseId, chapter, userId);
+            Activity saved = activityService.addActivity(chapterId, activity, userId);
             return ResponseEntity.ok(saved);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
@@ -38,36 +39,16 @@ public class ChapterController {
         }
     }
 
-    // ------------------ Reorder Chapters ------------------
-    @PatchMapping("/course/{courseId}")
-    public ResponseEntity<?> reorderChapters(
-            @PathVariable Integer courseId,
-            @RequestBody List<Integer> chapterIds,
+    // ------------------ Edit Activity ------------------
+    @PatchMapping("/activity/{activityId}")
+    public ResponseEntity<?> editActivity(
+            @PathVariable Integer activityId,
+            @RequestBody Activity updated,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            chapterService.reorderChapters(courseId, chapterIds, userId);
-            return ResponseEntity.ok().build();
-        } catch (SecurityException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    // ------------------ Edit Chapter ------------------
-    @PutMapping("/chapter/{chapterId}")
-    public ResponseEntity<?> editChapter(
-            @PathVariable Integer chapterId,
-            @RequestBody Chapter updated,
-            @RequestHeader("Authorization") String authorization
-    ) {
-        try {
-            Integer userId = extractUserIdFromToken(authorization);
-            Chapter saved = chapterService.editChapter(chapterId, updated, userId);
+            Activity saved = activityService.editActivity(activityId, updated, userId);
             return ResponseEntity.ok(saved);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
@@ -78,15 +59,15 @@ public class ChapterController {
         }
     }
 
-    // ------------------ Delete Chapter ------------------
-    @DeleteMapping("/chapter/{chapterId}")
-    public ResponseEntity<?> deleteChapter(
-            @PathVariable Integer chapterId,
+    // ------------------ Delete Activity ------------------
+    @DeleteMapping("/activity/{activityId}")
+    public ResponseEntity<?> deleteActivity(
+            @PathVariable Integer activityId,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            chapterService.deleteChapter(chapterId, userId);
+            activityService.deleteActivity(activityId, userId);
             return ResponseEntity.ok().build();
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
@@ -97,16 +78,16 @@ public class ChapterController {
         }
     }
 
-    // ------------------ Fetch Chapter With Items ------------------
-    @GetMapping("/chapter/{chapterId}")
-    public ResponseEntity<?> fetchChapterWithItems(
-            @PathVariable Integer chapterId,
+    // ------------------ Fetch Activity ------------------
+    @GetMapping("/activity/{activityId}")
+    public ResponseEntity<?> fetchActivity(
+            @PathVariable Integer activityId,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            Chapter chapter = chapterService.fetchChapterWithItems(chapterId, userId);
-            return ResponseEntity.ok(chapter);
+            Activity activity = activityService.fetchActivity(activityId, userId);
+            return ResponseEntity.ok(activity);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -117,11 +98,7 @@ public class ChapterController {
     }
 
     // ------------------ Helper ------------------
-    // Dummy method — replace with your JWT parsing logic
     private Integer extractUserIdFromToken(String authorization) {
-        // Expect: "Bearer <token>"
-        String token = authorization.replace("Bearer ", "").trim();
-        // TODO: validate token and extract user ID
-        return 1; // placeholder
+        return jwtUtil.extractUserIdFromHeader(authorization);
     }
 }

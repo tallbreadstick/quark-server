@@ -1,15 +1,13 @@
 package com.darauy.quark.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
 
 @Data
-@Builder
-@NoArgsConstructor
-@AllArgsConstructor
 public class LoginRequest {
-    private String identifier; // username or email
+    @NotBlank
+    private String identifier;
+
+    @NotBlank
     private String password;
 }

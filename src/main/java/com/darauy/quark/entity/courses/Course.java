@@ -1,21 +1,28 @@
 package com.darauy.quark.entity.courses;
 
 import com.darauy.quark.entity.users.User;
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.Set;
 
 @Entity
-@Table(name = "courses")
+@Table(
+    name = "courses",
+    indexes = {
+        @Index(name = "idx_course_name", columnList = "name"),
+        @Index(name = "idx_course_owner", columnList = "owner_id"),
+        @Index(name = "idx_course_created_at", columnList = "created_at"),
+        @Index(name = "idx_course_origin", columnList = "origin_id")
+    }
+)
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Course {
 
     @Id
@@ -26,47 +33,36 @@ public class Course {
     private String name;
 
     @Column(length = 255)
-    private String description; // nullable
+    private String description;
 
     @Column(columnDefinition = "TEXT")
-    private String introduction; // nullable
+    private String introduction;
 
     @Column(nullable = false)
     private Integer version;
 
-    // ----------- Self-Referential Origin Course -----------
+    // Nullable self-referencing origin
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "origin")
-    @JsonBackReference
-    private Course origin; // nullable
+    @JoinColumn(name = "origin_id")
+    private Course origin;
 
-    @OneToMany(mappedBy = "origin")
-    @JsonManagedReference
-    private Set<Course> derivedCourses;
-
-    // ----------- Owner (User) -----------
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "owner", nullable = false)
+    // Required owner (cascade delete)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.REMOVE)
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    // ----------- Many-to-Many via CourseTag bridge table -----------
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private Set<CourseTag> tags;
-
-    @Column(name = "created_at", nullable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false)
+    @UpdateTimestamp
+    @Column(name = "updated_at")
     private LocalDateTime updatedAt;
-    
-    /**
-     * Returns the owner's ID for JSON serialization.
-     * This allows the frontend to access ownerId directly.
-     * 
-     * @return The ID of the course owner, or null if owner is not loaded
-     */
-    @JsonProperty("ownerId")
+
+    // Not mapped by @ManyToMany — you will load tags through CourseTag
+    @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
+    private Set<CourseTag> courseTags;
+
     public Integer getOwnerId() {
         return owner != null ? owner.getId() : null;
     }

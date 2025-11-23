@@ -1,16 +1,15 @@
 package com.darauy.quark.entity.courses.lesson;
 
 import com.darauy.quark.entity.courses.Chapter;
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
 @Table(name = "lessons")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Lesson {
 
     @Id
@@ -20,21 +19,22 @@ public class Lesson {
     @Column(length = 255, nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Integer number;
+    @Column(name = "idx", nullable = false)
+    private Integer idx;
 
     @Column(length = 255)
-    private String description; // nullable
+    private String description;
 
     @Column(length = 100)
-    private String icon; // nullable
+    private String icon;
 
     @Column(columnDefinition = "TEXT")
-    private String finishMessage; // nullable TEXT
+    private String finishMessage;
 
-    // ---------- Relationship ----------
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @Column(nullable = false)
+    private Integer version;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chapter_id", nullable = false)
-    @JsonBackReference
     private Chapter chapter;
 }

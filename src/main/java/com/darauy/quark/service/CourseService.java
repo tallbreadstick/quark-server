@@ -1,45 +1,21 @@
 package com.darauy.quark.service;
 
 import com.darauy.quark.dto.CourseRequest;
-import com.darauy.quark.entity.courses.Course;
-import com.darauy.quark.entity.courses.CourseTag;
-import com.darauy.quark.entity.courses.CourseTagId;
-import com.darauy.quark.entity.courses.Tag;
+import com.darauy.quark.entity.courses.*;
+import com.darauy.quark.entity.courses.activity.Activity;
+import com.darauy.quark.entity.courses.activity.Section;
+import com.darauy.quark.entity.courses.lesson.Lesson;
+import com.darauy.quark.entity.courses.lesson.Page;
 import com.darauy.quark.entity.users.User;
-import com.darauy.quark.repository.CourseRepository;
-import com.darauy.quark.repository.TagRepository;
-import com.darauy.quark.repository.UserRepository;
+import com.darauy.quark.repository.*;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
-/**
- * Service managing course-related business logic and operations.
- * 
- * This service handles the complete course lifecycle:
- * - Course creation with tags and relationships
- * - Course retrieval (single and list)
- * - Course updates with ownership validation
- * - Course deletion with ownership validation
- * 
- * Key Features:
- * - User ownership is determined from JWT token (not from request body)
- * - Nullable fields (description, introduction, origin, tags) are optional
- * - Tag relationships are managed through CourseTag join entity
- * - Ownership validation ensures users can only modify their own courses
- * 
- * Course-Tag Relationship:
- * - Many-to-Many relationship via CourseTag bridge entity
- * - Tags are linked after course is saved (to get course ID)
- * - Embedded ID (CourseTagId) contains both courseId and tagId
- */
 @Service
 public class CourseService {
 
@@ -47,267 +23,323 @@ public class CourseService {
     private CourseRepository courseRepository;
 
     @Autowired
-    private UserRepository userRepository;
+    private ChapterRepository chapterRepository;
+
+    @Autowired
+    private LessonRepository lessonRepository;
+
+    @Autowired
+    private PageRepository pageRepository;
+
+    @Autowired
+    private ActivityRepository activityRepository;
+
+    @Autowired
+    private SectionRepository sectionRepository;
 
     @Autowired
     private TagRepository tagRepository;
 
-    /**
-     * Creates a new course with optional tags and relationships.
-     * 
-     * Creation Pipeline:
-     * 1. Validate required fields (name)
-     * 2. Retrieve user from database using userId (from JWT token)
-     * 3. Build Course entity with required and optional fields
-     * 4. Set version to 1 (internal metadata, not user-provided)
-     * 5. Handle origin course relationship if originId is provided
-     * 6. Save course to get generated ID
-     * 7. Create CourseTag relationships if tagIds are provided
-     * 8. Save course again with tag relationships
-     * 
-     * Note: Tags must be linked after course is saved because CourseTagId
-     * requires the course ID, which is only available after persistence.
-     * 
-     * @param courseRequest DTO containing course data (nullable fields are optional)
-     * @param userId User ID extracted from JWT token (becomes course owner)
-     * @return Created Course entity with all relationships
-     * @throws IllegalArgumentException if required fields are missing or user not found
-     */
-    @Transactional
-    public Course createCourse(CourseRequest courseRequest, Integer userId) {
-        if (courseRequest.getName() == null || courseRequest.getName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Name is required");
-        }
+    @Autowired
+    private CourseTagRepository courseTagRepository;
 
-        // Get owner from JWT userId
-        Optional<User> owner = userRepository.findById(userId);
-        if (owner.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
-        }
+    @Autowired
+    private CourseSharedRepository courseSharedRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    // ---------------- CREATE COURSE ----------------
+    @Transactional
+    public Course createCourse(User owner, CourseRequest request) {
+        validateCourseRequest(request);
 
         Course course = Course.builder()
-                .name(courseRequest.getName())
-                .description(courseRequest.getDescription()) // nullable
-                .introduction(courseRequest.getIntroduction()) // nullable
-                .version(1) // Internal metadata: always start at version 1
-                .owner(owner.get())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .name(request.getName())
+                .description(request.getDescription())
+                .introduction(request.getIntroduction())
+                .version(1)
+                .owner(owner)
                 .build();
 
-        // Handle origin if provided
-        if (courseRequest.getOriginId() != null) {
-            Optional<Course> origin = courseRepository.findById(courseRequest.getOriginId());
-            origin.ifPresent(course::setOrigin);
-        }
+        courseRepository.save(course);
 
-        // Save course first to get the ID
-        Course saved = courseRepository.save(course);
+        assignTags(course, request.getTags());
 
-        // Handle tags if provided (after course is saved so we have the ID)
-        if (courseRequest.getTagIds() != null && !courseRequest.getTagIds().isEmpty()) {
-            Set<CourseTag> courseTags = new HashSet<>();
-            for (Integer tagId : courseRequest.getTagIds()) {
-                Optional<Tag> tag = tagRepository.findById(tagId);
-                if (tag.isPresent()) {
-                    CourseTagId courseTagId = new CourseTagId();
-                    courseTagId.setCourseId(saved.getId());
-                    courseTagId.setTagId(tagId);
-                    
-                    CourseTag courseTag = CourseTag.builder()
-                            .id(courseTagId)
-                            .course(saved)
-                            .tag(tag.get())
-                            .build();
-                    courseTags.add(courseTag);
-                }
-            }
-            saved.setTags(courseTags);
-            saved = courseRepository.save(saved);
-        }
-
-        return saved;
+        return course;
     }
 
-    /**
-     * Retrieves a course by its ID.
-     * 
-     * Uses a custom query with fetch join to eagerly load the owner relationship,
-     * preventing LazyInitializationException during JSON serialization.
-     * 
-     * @param id Course ID to retrieve
-     * @return Course entity if found, null otherwise
-     */
-    @Transactional(readOnly = true)
-    public Course getCourseById(Integer id) {
-        return courseRepository.findByIdWithOwner(id).orElse(null);
-    }
-
-    /**
-     * Retrieves all courses from the database.
-     * 
-     * Uses a custom query with fetch join to eagerly load the owner relationship,
-     * preventing LazyInitializationException during JSON serialization.
-     * 
-     * @return List of all Course entities with owner loaded
-     */
-    @Transactional(readOnly = true)
-    public List<Course> getAllCourses() {
-        return courseRepository.findAllWithOwner();
-    }
-
-    /**
-     * Updates a course with partial updates (PATCH operation).
-     * 
-     * Update Pipeline:
-     * 1. Retrieve course by ID
-     * 2. Validate course exists
-     * 3. Verify user is the course owner (ownership check)
-     * 4. Apply updates from Map (only provided fields are updated)
-     * 5. Handle special cases:
-     *    - Nullable fields can be set to null
-     *    - Tag updates replace all existing tags
-     *    - Origin can be set or cleared
-     *    - Version is automatically incremented (internal metadata)
-     * 6. Increment version (internal metadata management)
-     * 7. Update timestamp
-     * 8. Save and return updated course
-     * 
-     * Supported update fields:
-     * - name: Course name
-     * - description: Course description (nullable)
-     * - introduction: Course introduction text (nullable)
-     * - originId: ID of origin course (nullable, for course derivation)
-     * - tagIds: List of tag IDs to associate with course (replaces existing tags)
-     * 
-     * Note: The version field is managed internally and is automatically
-     * incremented on each update. User-provided version values are ignored.
-     * 
-     * @param id Course ID to update
-     * @param updates Map of field names to new values (partial update)
-     * @param userId User ID from JWT token (for ownership validation)
-     * @return Updated Course entity
-     * @throws IllegalArgumentException if user is not the course owner
-     */
+    // ---------------- FORK COURSE ----------------
     @Transactional
-    public Course updateCourse(Integer id, Map<String, Object> updates, Integer userId) {
-        Optional<Course> optional = courseRepository.findById(id);
-        if (optional.isEmpty()) {
-            return null;
+    public Course forkCourse(User owner, Integer courseId, CourseRequest request) {
+        Course origin = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found"));
+
+        if (origin.getOrigin() != null) {
+            origin = origin.getOrigin(); // always fork original
         }
 
-        Course course = optional.get();
+        Course forked = Course.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .introduction(request.getIntroduction())
+                .version(1)
+                .origin(origin)
+                .owner(owner)
+                .build();
 
-        // Check if user is the owner
-        if (!course.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only update your own courses");
-        }
+        courseRepository.save(forked);
 
-        updates.forEach((key, value) -> {
-            switch (key) {
-                case "name":
-                    if (value != null) {
-                        course.setName((String) value);
-                    }
-                    break;
-                case "description":
-                    if (value != null) {
-                        course.setDescription((String) value);
-                    } else {
-                        course.setDescription(null);
-                    }
-                    break;
-                case "introduction":
-                    if (value != null) {
-                        course.setIntroduction((String) value);
-                    } else {
-                        course.setIntroduction(null);
-                    }
-                    break;
-                // Version is managed internally - automatically incremented on update
-                // Do not allow version to be set via PATCH request
-                case "version":
-                    // Ignore version updates from user - it's managed internally
-                    break;
-                case "originId":
-                    if (value != null) {
-                        Integer originId = (Integer) value;
-                        courseRepository.findById(originId).ifPresent(course::setOrigin);
-                    } else {
-                        course.setOrigin(null);
-                    }
-                    break;
-                case "tagIds":
-                    if (value != null && value instanceof List) {
-                        @SuppressWarnings("unchecked")
-                        List<Integer> tagIds = (List<Integer>) value;
-                        Set<CourseTag> courseTags = new HashSet<>();
-                        for (Integer tagId : tagIds) {
-                            Optional<Tag> tag = tagRepository.findById(tagId);
-                            if (tag.isPresent()) {
-                                CourseTagId courseTagId = new CourseTagId();
-                                courseTagId.setCourseId(course.getId());
-                                courseTagId.setTagId(tagId);
-                                
-                                CourseTag courseTag = CourseTag.builder()
-                                        .id(courseTagId)
-                                        .course(course)
-                                        .tag(tag.get())
-                                        .build();
-                                courseTags.add(courseTag);
-                            }
-                        }
-                        // Clear existing tags and set new ones
-                        if (course.getTags() != null) {
-                            course.getTags().clear();
-                        }
-                        course.setTags(courseTags);
-                    }
-                    break;
-                default:
-                    // ignore unknown fields
-                    break;
-            }
-        });
+        // Copy tags
+        Set<CourseTag> originalTags = courseTagRepository.findByCourse(origin);
+        originalTags.forEach(ct -> courseTagRepository.save(
+                CourseTag.builder()
+                        .course(forked)
+                        .tag(ct.getTag())
+                        .build()
+        ));
 
-        // Increment version on update (internal metadata management)
-        course.setVersion(course.getVersion() + 1);
-        course.setUpdatedAt(LocalDateTime.now());
-        return courseRepository.save(course);
+        // Deep copy chapters, lessons, activities, sections, pages
+        deepCopyCourseStructure(origin, forked);
+
+        return forked;
     }
 
-    /**
-     * Deletes a course by ID.
-     * 
-     * Deletion Pipeline:
-     * 1. Retrieve course by ID
-     * 2. Validate course exists
-     * 3. Verify user is the course owner (ownership check)
-     * 4. Delete course from database
-     * 
-     * Note: Cascade relationships (tags, chapters, etc.) are handled
-     * by JPA cascade configuration in the Course entity.
-     * 
-     * @param id Course ID to delete
-     * @param userId User ID from JWT token (for ownership validation)
-     * @return true if course was deleted, false if course not found
-     * @throws IllegalArgumentException if user is not the course owner
-     */
+    // ---------------- EDIT COURSE ----------------
     @Transactional
-    public boolean deleteCourse(Integer id, Integer userId) {
-        Optional<Course> optional = courseRepository.findById(id);
-        if (optional.isEmpty()) {
-            return false;
+    public Course editCourse(User owner, Integer courseId, CourseRequest request) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found"));
+
+        if (!course.getOwner().getId().equals(owner.getId())) {
+            throw new SecurityException("User does not own this course");
         }
 
-        Course course = optional.get();
+        validateCourseRequest(request);
 
-        // Check if user is the owner
-        if (!course.getOwner().getId().equals(userId)) {
-            throw new IllegalArgumentException("You can only delete your own courses");
+        course.setName(request.getName());
+        course.setDescription(request.getDescription());
+        course.setIntroduction(request.getIntroduction());
+        courseRepository.save(course);
+
+        courseTagRepository.deleteByCourse(course);
+        assignTags(course, request.getTags());
+
+        return course;
+    }
+
+    // ---------------- DELETE COURSE ----------------
+    @Transactional
+    public void deleteCourse(User owner, Integer courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found"));
+
+        if (!course.getOwner().getId().equals(owner.getId())) {
+            throw new SecurityException("User does not own this course");
         }
 
         courseRepository.delete(course);
-        return true;
+    }
+
+    // ---------------- FETCH COURSES BY FILTER ----------------
+    public List<Course> fetchCoursesByFilter(User user,
+                                             Boolean myCourses,
+                                             Boolean sharedWithMe,
+                                             Boolean forkable,
+                                             List<String> tags,
+                                             String sortBy,
+                                             String order,
+                                             String search) {
+
+        List<Course> allCourses = courseRepository.findAll();
+
+        return allCourses.stream()
+                .filter(c -> {
+                    if (myCourses != null && myCourses) {
+                        return c.getOwner().getId().equals(user.getId());
+                    }
+                    return true;
+                })
+                .filter(c -> {
+                    if (sharedWithMe != null && sharedWithMe) {
+                        return courseSharedRepository.findByUserAndCourse(user, c).isPresent();
+                    }
+                    return true;
+                })
+                .filter(c -> {
+                    if (forkable != null) {
+                        return forkable.equals(Boolean.TRUE) ? true : true; // TODO: add forkable field
+                    }
+                    return true;
+                })
+                .filter(c -> {
+                    if (tags != null && !tags.isEmpty()) {
+                        Set<String> courseTagNames = courseTagRepository.findByCourse(c)
+                                .stream().map(ct -> ct.getTag().getName()).collect(Collectors.toSet());
+                        return courseTagNames.containsAll(tags);
+                    }
+                    return true;
+                })
+                .filter(c -> {
+                    if (StringUtils.hasText(search)) {
+                        return c.getName().toLowerCase().contains(search.toLowerCase()) ||
+                                (c.getDescription() != null && c.getDescription().toLowerCase().contains(search.toLowerCase()));
+                    }
+                    return true;
+                })
+                .sorted((a, b) -> {
+                    if ("name".equals(sortBy)) {
+                        return "descending".equals(order) ?
+                                b.getName().compareTo(a.getName()) : a.getName().compareTo(b.getName());
+                    } else if ("date_created".equals(sortBy)) {
+                        return "descending".equals(order) ?
+                                b.getCreatedAt().compareTo(a.getCreatedAt()) : a.getCreatedAt().compareTo(b.getCreatedAt());
+                    }
+                    return 0;
+                })
+                .toList();
+    }
+
+    // ---------------- FETCH COURSE WITH CHAPTERS ----------------
+    public Course fetchCourseWithChapters(User user, Integer courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found"));
+
+        if (!course.getOwner().getId().equals(user.getId()) &&
+                courseSharedRepository.findByUserAndCourse(user, course).isEmpty()) {
+            throw new SecurityException("User cannot access this course");
+        }
+
+        // --- Eager load chapters and children in batch ---
+        List<Chapter> chapters = chapterRepository.findByCourse(course);
+
+        List<Lesson> lessons = lessonRepository.findByChapterIn(chapters);
+        List<Activity> activities = activityRepository.findByChapterIn(chapters);
+
+        List<Page> pages = pageRepository.findByLessonIn(lessons);
+        List<Section> sections = sectionRepository.findByActivityIn(activities);
+
+        // Optional: you can attach these lists to the entities if needed
+        // for example, if you want the course object to carry its children fully loaded
+
+        return course;
+    }
+
+    // ---------------- SHARE COURSE ----------------
+    @Transactional
+    public void shareCourse(User owner, Integer courseId, Integer targetUserId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found"));
+
+        if (!course.getOwner().getId().equals(owner.getId())) {
+            throw new SecurityException("User does not own this course");
+        }
+
+        User targetUser = userRepository.findById(targetUserId)
+                .orElseThrow(() -> new NoSuchElementException("Target user not found"));
+
+        if (courseSharedRepository.findByUserAndCourse(targetUser, course).isEmpty()) {
+            courseSharedRepository.save(CourseShared.builder()
+                    .user(targetUser)
+                    .course(course)
+                    .build());
+        }
+    }
+
+    // ---------------- HELPER METHODS ----------------
+    private void validateCourseRequest(CourseRequest request) {
+        if (request.getName() == null || request.getName().length() < 10 || request.getName().length() > 255) {
+            throw new IllegalArgumentException("Course name must be between 10 and 255 characters");
+        }
+
+        if (request.getDescription() != null && request.getDescription().length() > 255) {
+            throw new IllegalArgumentException("Course description cannot exceed 255 characters");
+        }
+
+        if (request.getTags() != null && request.getTags().size() > 3) {
+            throw new IllegalArgumentException("Cannot assign more than 3 tags");
+        }
+    }
+
+    private void assignTags(Course course, List<String> tagNames) {
+        if (tagNames == null) return;
+
+        for (String tagName : tagNames) {
+            Tag tag = tagRepository.findByName(tagName)
+                    .orElseThrow(() -> new NoSuchElementException("Tag not found: " + tagName));
+            courseTagRepository.save(CourseTag.builder()
+                    .course(course)
+                    .tag(tag)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void deepCopyCourseStructure(Course origin, Course forked) {
+        List<Chapter> chapters = chapterRepository.findByCourse(origin);
+
+        for (Chapter ch : chapters) {
+            Chapter newChapter = Chapter.builder()
+                    .name(ch.getName())
+                    .idx(ch.getIdx())
+                    .description(ch.getDescription())
+                    .icon(ch.getIcon())
+                    .course(forked)
+                    .build();
+            chapterRepository.save(newChapter);
+
+            // Copy Lessons
+            List<Lesson> lessons = lessonRepository.findByChapter(ch);
+            for (Lesson l : lessons) {
+                Lesson newLesson = Lesson.builder()
+                        .name(l.getName())
+                        .idx(l.getIdx())
+                        .description(l.getDescription())
+                        .icon(l.getIcon())
+                        .finishMessage(l.getFinishMessage())
+                        .version(l.getVersion())
+                        .chapter(newChapter)
+                        .build();
+                lessonRepository.save(newLesson);
+
+                // Copy Pages
+                List<Page> pages = pageRepository.findByLesson(l);
+                for (Page p : pages) {
+                    Page newPage = Page.builder()
+                            .idx(p.getIdx())
+                            .content(p.getContent())
+                            .lesson(newLesson)
+                            .build();
+                    pageRepository.save(newPage);
+                }
+            }
+
+            // Copy Activities
+            List<Activity> activities = activityRepository.findByChapter(ch);
+            for (Activity a : activities) {
+                Activity newActivity = Activity.builder()
+                        .name(a.getName())
+                        .idx(a.getIdx())
+                        .description(a.getDescription())
+                        .icon(a.getIcon())
+                        .finishMessage(a.getFinishMessage())
+                        .ruleset(a.getRuleset())
+                        .version(a.getVersion())
+                        .chapter(newChapter)
+                        .build();
+                activityRepository.save(newActivity);
+
+                // Copy Sections
+                List<Section> sections = sectionRepository.findByActivity(a);
+                for (Section s : sections) {
+                    Section newSection = Section.builder()
+                            .idx(s.getIdx())
+                            .content(s.getContent())
+                            .activity(newActivity)
+                            .build();
+                    sectionRepository.save(newSection);
+                }
+            }
+        }
     }
 }

@@ -5,123 +5,81 @@ import com.darauy.quark.dto.LoginRequest;
 import com.darauy.quark.dto.RegisterRequest;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.UserRepository;
+import de.mkammerer.argon2.Argon2Factory;
+import de.mkammerer.argon2.Argon2;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
-/**
- * Service handling user authentication and registration operations.
- * 
- * This service manages the authentication pipeline:
- * 1. User login: Validates credentials and generates JWT token
- * 2. User registration: Creates new user account and generates JWT token
- * 
- * Authentication Flow:
- * - Login: Username/Email + Password -> Validate -> Generate JWT -> Return AuthResponse
- * - Register: User details -> Validate uniqueness -> Hash password -> Save -> Generate JWT -> Return AuthResponse
- * 
- * Security:
- * - Passwords are hashed using BCrypt before storage
- * - JWT tokens are generated for successful authentications
- * - User credentials are validated against database records
- */
 @Service
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
-    private final JwtService jwtService;
 
-    public AuthService(UserRepository userRepository, JwtService jwtService) {
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    public AuthService(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.jwtService = jwtService;
     }
 
-    /**
-     * Authenticates a user and generates a JWT token.
-     * 
-     * Authentication Pipeline:
-     * 1. Look up user by username or email (identifier can be either)
-     * 2. Verify user exists
-     * 3. Compare provided password with stored BCrypt hash
-     * 4. Generate JWT token with user ID
-     * 5. Return AuthResponse with user details and token
-     * 
-     * @param req LoginRequest containing identifier (username/email) and password
-     * @return AuthResponse with user details, JWT token, and expiration time
-     * @throws IllegalArgumentException if user not found or credentials are invalid
-     */
-    public AuthResponse login(LoginRequest req) {
-        Optional<User> opt = userRepository.findByUsernameOrEmail(req.getIdentifier(), req.getIdentifier());
-        if (opt.isEmpty()) {
-            throw new IllegalArgumentException("User not found");
-        }
-        User user = opt.get();
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid credentials");
-        }
+    private final Argon2 argon2 = Argon2Factory.create();
 
-        String token = jwtService.generateToken(user.getId());
-        Long expiration = jwtService.getExpiration();
-
-        return AuthResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .userType(user.getUserType())
-                .message("Login successful")
-                .token(token)
-                .expiration(expiration)
-                .build();
-    }
-
-    /**
-     * Registers a new user account and generates a JWT token.
-     * 
-     * Registration Pipeline:
-     * 1. Validate username uniqueness (check if already exists)
-     * 2. Validate email uniqueness (check if already exists)
-     * 3. Hash password using BCrypt
-     * 4. Create User entity with hashed password
-     * 5. Save user to database
-     * 6. Generate JWT token with new user ID
-     * 7. Return AuthResponse with user details and token
-     * 
-     * @param req RegisterRequest containing username, email, password, and userType
-     * @return AuthResponse with user details, JWT token, and expiration time
-     * @throws IllegalArgumentException if username or email already exists
-     */
-    public AuthResponse register(RegisterRequest req) {
-        if (userRepository.existsByUsername(req.getUsername())) {
+    @Transactional
+    public void register(RegisterRequest request) {
+        // Check username/email uniqueness
+        if (userRepository.findByUsername(request.getUsername()).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
-        if (userRepository.existsByEmail(req.getEmail())) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists");
         }
 
+        // Hash password
+        String hash = argon2.hash(2, 65536, 1, request.getPassword());
+
         User user = User.builder()
-                .username(req.getUsername())
-                .email(req.getEmail())
-                .password(passwordEncoder.encode(req.getPassword()))
-                .userType(req.getUserType())
-                .createdAt(LocalDateTime.now())
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .password(hash)
+                .userType(request.getUserType())
                 .build();
 
-        User saved = userRepository.save(user);
+        userRepository.save(user);
+    }
 
-        String token = jwtService.generateToken(saved.getId());
-        Long expiration = jwtService.getExpiration();
+    public AuthResponse login(LoginRequest request) {
+        Optional<User> optionalUser = request.getIdentifier().contains("@")
+                ? userRepository.findByEmail(request.getIdentifier())
+                : userRepository.findByUsername(request.getIdentifier());
 
-        return AuthResponse.builder()
-                .id(saved.getId())
-                .username(saved.getUsername())
-                .email(saved.getEmail())
-                .userType(saved.getUserType())
-                .message("Account created")
-                .token(token)
-                .expiration(expiration)
-                .build();
+        if (optionalUser.isEmpty()) throw new IllegalArgumentException("Invalid credentials");
+
+        User user = optionalUser.get();
+        if (!argon2.verify(user.getPassword(), request.getPassword())) {
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        Instant expiration = Instant.now().plus(24, ChronoUnit.HOURS);
+        String token = Jwts.builder()
+                .claim("user_id", user.getId())
+                .claim("user_type", user.getUserType().name())
+                .setExpiration(Date.from(expiration))
+                .signWith(SignatureAlgorithm.HS256, jwtSecret.getBytes())
+                .compact();
+
+        return new AuthResponse(token, user.getUsername(), user.getEmail());
+    }
+
+    public List<User> searchUsers(String identifier) {
+        return userRepository.searchTop10ByIdentifier(identifier);
     }
 }

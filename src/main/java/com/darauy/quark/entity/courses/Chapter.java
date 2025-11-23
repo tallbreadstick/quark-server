@@ -2,19 +2,18 @@ package com.darauy.quark.entity.courses;
 
 import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.lesson.Lesson;
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Set;
+import java.util.Collections;
+import java.util.List;
 
 @Entity
 @Table(name = "chapters")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class Chapter {
 
     @Id
@@ -24,28 +23,34 @@ public class Chapter {
     @Column(length = 255, nullable = false)
     private String name;
 
-    @Column(nullable = false)
-    private Integer number;
+    @Column(name = "idx", nullable = false)
+    private Integer idx;
 
     @Column(length = 255)
-    private String description; // nullable
+    private String description;
 
     @Column(length = 100)
-    private String icon; // nullable
+    private String icon;
 
-    // ------------------- Relationships -------------------
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
-    @JsonBackReference
     private Course course;
 
-    // Future-proofing for Lessons & Activities
-    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private Set<Lesson> lessons;
+    @OneToMany(mappedBy = "chapter", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OrderBy("idx ASC")
+    private List<Lesson> lessons;
 
-    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, orphanRemoval = true)
-    @JsonManagedReference
-    private Set<Activity> activities;
+    @OneToMany(mappedBy = "chapter", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @OrderBy("idx ASC")
+    private List<Activity> activities;
+
+    // Helper getters
+    public List<Lesson> getLessons() {
+        return lessons != null ? lessons : Collections.emptyList();
+    }
+
+    public List<Activity> getActivities() {
+        return activities != null ? activities : Collections.emptyList();
+    }
+
 }
