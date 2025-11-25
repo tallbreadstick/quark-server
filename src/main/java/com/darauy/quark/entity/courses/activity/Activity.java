@@ -4,6 +4,8 @@ import com.darauy.quark.entity.courses.Chapter;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Table(
         name = "activities",
@@ -46,4 +48,8 @@ public class Activity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chapter_id", nullable = false)
     private Chapter chapter;
+
+    @OneToMany(mappedBy = "activity", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Section> sections;
+
 }

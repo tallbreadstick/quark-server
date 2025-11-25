@@ -1,4 +1,4 @@
-package com.darauy.quark.dto;
+package com.darauy.quark.dto.request;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;

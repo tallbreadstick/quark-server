@@ -1,4 +1,4 @@
-package com.darauy.quark.dto;
+package com.darauy.quark.dto.response;
 
 import lombok.Builder;
 import lombok.Data;
@@ -29,6 +29,7 @@ public class ChapterContentResponse {
         private Integer id;
         private ItemType itemType;
         private Integer idx;
+        private String name;
         private String description;
         private String icon;
         private String finishMessage;
@@ -39,9 +40,10 @@ public class ChapterContentResponse {
         private String ruleset;
 
         @Builder(builderMethodName = "activityBuilder")
-        public Activity(Integer id, Integer idx, String description, String icon, String finishMessage, String ruleset) {
+        public Activity(Integer id, Integer idx, String name, String description, String icon, String finishMessage, String ruleset) {
             this.setId(id);
             this.setIdx(idx);
+            this.setName(name);
             this.setDescription(description);
             this.setIcon(icon);
             this.setFinishMessage(finishMessage);
@@ -54,9 +56,10 @@ public class ChapterContentResponse {
     public static class Lesson extends ChapterItem {
 
         @Builder(builderMethodName = "lessonBuilder")
-        public Lesson(Integer id, Integer idx, String description, String icon, String finishMessage) {
+        public Lesson(Integer id, Integer idx, String name, String description, String icon, String finishMessage) {
             this.setId(id);
             this.setIdx(idx);
+            this.setName(name);
             this.setDescription(description);
             this.setIcon(icon);
             this.setFinishMessage(finishMessage);

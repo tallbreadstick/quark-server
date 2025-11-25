@@ -1,8 +1,8 @@
 package com.darauy.quark.controller;
 
-import com.darauy.quark.dto.CourseContentResponse;
-import com.darauy.quark.dto.CourseFilterResponse;
-import com.darauy.quark.dto.CourseRequest;
+import com.darauy.quark.dto.response.CourseContentResponse;
+import com.darauy.quark.dto.response.CourseFilterResponse;
+import com.darauy.quark.dto.request.CourseRequest;
 import com.darauy.quark.entity.courses.Course;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.UserRepository;

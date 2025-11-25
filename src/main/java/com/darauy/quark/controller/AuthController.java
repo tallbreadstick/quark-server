@@ -1,9 +1,9 @@
 package com.darauy.quark.controller;
 
-import com.darauy.quark.dto.AuthResponse;
-import com.darauy.quark.dto.LoginRequest;
-import com.darauy.quark.dto.RegisterRequest;
-import com.darauy.quark.dto.UserResponse;
+import com.darauy.quark.dto.response.AuthResponse;
+import com.darauy.quark.dto.request.LoginRequest;
+import com.darauy.quark.dto.request.RegisterRequest;
+import com.darauy.quark.dto.response.UserResponse;
 import com.darauy.quark.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;

@@ -9,6 +9,8 @@ import java.util.List;
 public interface ActivityRepository extends JpaRepository<Activity, Integer> {
     List<Activity> findByChapter(Chapter chapter);
 
+    int countByChapterId(Integer chapterId);
+    List<Activity> findByChapterIdOrderByIdx(Integer chapterId);
     // Batch method for multiple chapters
     List<Activity> findByChapterIn(List<Chapter> chapters);
 }

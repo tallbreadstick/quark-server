@@ -1,94 +1,173 @@
 package com.darauy.quark.service;
 
+import com.darauy.quark.dto.request.ActivityRequest;
+import com.darauy.quark.dto.response.ActivityContentResponse;
 import com.darauy.quark.entity.courses.Chapter;
 import com.darauy.quark.entity.courses.activity.Activity;
+import com.darauy.quark.entity.courses.activity.Section;
+import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.repository.ActivityRepository;
 import com.darauy.quark.repository.ChapterRepository;
+import com.darauy.quark.repository.SectionRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.Comparator;
+import java.util.List;
+import java.util.NoSuchElementException;
 
 @Service
 @RequiredArgsConstructor
 public class ActivityService {
 
-    private final ActivityRepository activityRepository;
     private final ChapterRepository chapterRepository;
+    private final ActivityRepository activityRepository;
+    private final SectionRepository sectionRepository;
+    private final ObjectMapper objectMapper;
 
-    // Add Activity
-    public Activity addActivity(Integer chapterId, Activity activity, Integer userId) {
+    // ------------------ Add Activity ------------------
+    public void addActivity(Integer chapterId, Integer userId, ActivityRequest req) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new NoSuchElementException("Chapter not found"));
 
         if (!chapter.getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this chapter");
+            throw new SecurityException("User does not own this chapter's course");
         }
 
-        // Determine idx
-        int maxIdx = activityRepository.findByChapter(chapter).stream()
-                .mapToInt(Activity::getIdx).max().orElse(0);
-        activity.setIdx(maxIdx + 1);
-        activity.setChapter(chapter);
+        validateRequest(req);
 
-        activity.setVersion(1);
+        int nextIdx = computeNextIdx(chapter);
 
-        return activityRepository.save(activity);
+        Activity activity = Activity.builder()
+                .name(req.getName())
+                .description(req.getDescription())
+                .icon(req.getIcon())
+                .finishMessage(req.getFinishMessage())
+                .ruleset(serializeRuleset(req.getRuleset()))
+                .idx(nextIdx)
+                .version(1)
+                .chapter(chapter)
+                .build();
+
+        activityRepository.save(activity);
     }
 
-    // Edit Activity
-    public Activity editActivity(Integer activityId, Activity updated, Integer userId) {
+    // ------------------ Edit Activity ------------------
+    public void editActivity(Integer activityId, Integer userId, ActivityRequest req) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
         if (!activity.getChapter().getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this activity's chapter/course");
+            throw new SecurityException("Activity not owned by this user");
         }
 
-        activity.setName(updated.getName());
-        activity.setDescription(updated.getDescription());
-        activity.setIcon(updated.getIcon());
-        activity.setRuleset(updated.getRuleset());
-        activity.setFinishMessage(updated.getFinishMessage());
+        validateRequest(req);
+
+        activity.setName(req.getName());
+        activity.setDescription(req.getDescription());
+        activity.setIcon(req.getIcon());
+        activity.setFinishMessage(req.getFinishMessage());
+        activity.setRuleset(serializeRuleset(req.getRuleset()));
         activity.setVersion(activity.getVersion() + 1);
 
-        return activityRepository.save(activity);
+        activityRepository.save(activity);
     }
 
-    // Delete Activity
-    @Transactional
+    // ------------------ Delete Activity ------------------
     public void deleteActivity(Integer activityId, Integer userId) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
-        Chapter chapter = activity.getChapter();
-        if (!chapter.getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this activity's chapter/course");
+        if (!activity.getChapter().getCourse().getOwnerId().equals(userId)) {
+            throw new SecurityException("Activity not owned by this user");
         }
+
+        Integer chapterId = activity.getChapter().getId();
+        int removedIdx = activity.getIdx();
 
         activityRepository.delete(activity);
 
-        // Reorder remaining lessons/activities
-        List<Activity> remaining = activityRepository.findByChapter(chapter);
-        for (int i = 0; i < remaining.size(); i++) {
-            remaining.get(i).setIdx(i + 1);
+        // reorder idx's
+        List<Activity> siblings = activityRepository.findByChapterIdOrderByIdx(chapterId);
+        int counter = 1;
+        for (Activity a : siblings) {
+            a.setIdx(counter++);
+            activityRepository.save(a);
         }
-        activityRepository.saveAll(remaining);
     }
 
-    // Fetch Activity with sections (if needed)
-    public Activity fetchActivity(Integer activityId, Integer userId) {
+    // ------------------ Fetch Activity ------------------
+    public ActivityContentResponse fetchActivity(Integer activityId, Integer userId) {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
         if (!activity.getChapter().getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this activity's chapter/course");
+            throw new SecurityException("User does not own this activity's course");
         }
 
-        // Force load sections if lazy (optional)
-        // activity.getSections().size();
+        List<Section> sections = sectionRepository.findByActivityId(activityId)
+                .stream()
+                .sorted(Comparator.comparingInt(Section::getIdx))
+                .toList();
 
-        return activity;
+        return ActivityContentResponse.builder()
+                .id(activity.getId())
+                .idx(activity.getIdx())
+                .name(activity.getName())
+                .description(activity.getDescription())
+                .icon(activity.getIcon())
+                .finishMessage(activity.getFinishMessage())
+                .ruleset(deserializeRuleset(activity.getRuleset()))
+                .sections(
+                        sections.stream().map(s -> {
+                            ActivityContentResponse.Section dto = new ActivityContentResponse.Section();
+                            dto.setId(s.getId());
+                            dto.setIdx(s.getIdx());
+                            return dto;
+                        }).toList()
+                )
+                .build();
     }
+
+    // ------------------ Validation ------------------
+    private void validateRequest(ActivityRequest r) {
+        if (r.getName() == null || r.getName().length() < 10 || r.getName().length() > 255)
+            throw new IllegalArgumentException("Invalid activity name");
+
+        if (r.getDescription() != null && r.getDescription().length() > 255)
+            throw new IllegalArgumentException("Invalid description");
+    }
+
+    // ------------------ Ruleset JSON Handling ------------------
+    private String serializeRuleset(ActivityRequest.Ruleset ruleset) {
+        try {
+            return ruleset == null ? "{}" : objectMapper.writeValueAsString(ruleset);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid ruleset format");
+        }
+    }
+
+    private ActivityContentResponse.Ruleset deserializeRuleset(String json) {
+        try {
+            return objectMapper.readValue(json, ActivityContentResponse.Ruleset.class);
+        } catch (Exception e) {
+            return new ActivityContentResponse.Ruleset(); // fallback
+        }
+    }
+
+    private int computeNextIdx(Chapter chapter) {
+        int maxLessonIdx = chapter.getLessons() == null ? 0 :
+                chapter.getLessons().stream()
+                        .mapToInt(Lesson::getIdx)
+                        .max().orElse(0);
+
+        int maxActivityIdx = chapter.getActivities() == null ? 0 :
+                chapter.getActivities().stream()
+                        .mapToInt(Activity::getIdx)
+                        .max().orElse(0);
+
+        return Math.max(maxLessonIdx, maxActivityIdx) + 1;
+    }
+
 }

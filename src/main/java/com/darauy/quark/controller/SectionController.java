@@ -1,6 +1,6 @@
 package com.darauy.quark.controller;
 
-import com.darauy.quark.dto.SectionRequest;
+import com.darauy.quark.dto.request.SectionRequest;
 import com.darauy.quark.entity.courses.activity.Section;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.UserRepository;
@@ -13,7 +13,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 @RestController

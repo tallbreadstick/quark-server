@@ -1,11 +1,9 @@
 package com.darauy.quark.service;
 
-import com.darauy.quark.dto.ChapterContentResponse;
-import com.darauy.quark.dto.ChapterRequest;
+import com.darauy.quark.dto.response.ChapterContentResponse;
+import com.darauy.quark.dto.request.ChapterRequest;
 import com.darauy.quark.entity.courses.Chapter;
 import com.darauy.quark.entity.courses.Course;
-import com.darauy.quark.entity.courses.lesson.Lesson;
-import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.repository.ChapterRepository;
 import com.darauy.quark.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
@@ -125,6 +123,7 @@ public class ChapterService {
                             ChapterContentResponse.Lesson.lessonBuilder()
                                     .id(lesson.getId())
                                     .idx(lesson.getIdx())
+                                    .name(lesson.getName())
                                     .description(lesson.getDescription())
                                     .icon(lesson.getIcon())
                                     .finishMessage(lesson.getFinishMessage())
@@ -139,6 +138,7 @@ public class ChapterService {
                             ChapterContentResponse.Activity.activityBuilder()
                                     .id(activity.getId())
                                     .idx(activity.getIdx())
+                                    .name(activity.getName())
                                     .description(activity.getDescription())
                                     .icon(activity.getIcon())
                                     .finishMessage(activity.getFinishMessage())

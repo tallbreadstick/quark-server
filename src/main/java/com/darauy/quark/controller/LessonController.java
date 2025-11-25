@@ -1,7 +1,7 @@
 package com.darauy.quark.controller;
 
-import com.darauy.quark.dto.LessonContentResponse;
-import com.darauy.quark.dto.LessonRequest;
+import com.darauy.quark.dto.response.LessonContentResponse;
+import com.darauy.quark.dto.request.LessonRequest;
 import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.security.JwtUtil;
 import com.darauy.quark.service.LessonService;

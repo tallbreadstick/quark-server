@@ -1,9 +1,10 @@
 package com.darauy.quark.service;
 
-import com.darauy.quark.dto.LessonContentResponse;
-import com.darauy.quark.dto.LessonContentResponse.Page;
-import com.darauy.quark.dto.LessonRequest;
+import com.darauy.quark.dto.response.LessonContentResponse;
+import com.darauy.quark.dto.response.LessonContentResponse.Page;
+import com.darauy.quark.dto.request.LessonRequest;
 import com.darauy.quark.entity.courses.Chapter;
+import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.repository.ChapterRepository;
 import com.darauy.quark.repository.LessonRepository;
@@ -32,15 +33,14 @@ public class LessonService {
             throw new SecurityException("User does not own this chapter");
         }
 
-        int maxIdx = lessonRepository.findByChapter(chapter).stream()
-                .mapToInt(Lesson::getIdx).max().orElse(0);
+        int nextIdx = computeNextIdx(chapter);
 
         Lesson lesson = Lesson.builder()
                 .name(request.getName())
                 .description(request.getDescription())
                 .icon(request.getIcon())
                 .finishMessage(request.getFinishMessage())
-                .idx(maxIdx + 1)
+                .idx(nextIdx)
                 .version(1)
                 .chapter(chapter)
                 .build();
@@ -131,4 +131,19 @@ public class LessonService {
             throw new IllegalArgumentException("Lesson description cannot exceed 255 characters");
         }
     }
+
+    private int computeNextIdx(Chapter chapter) {
+        int maxLessonIdx = chapter.getLessons() == null ? 0 :
+                chapter.getLessons().stream()
+                        .mapToInt(Lesson::getIdx)
+                        .max().orElse(0);
+
+        int maxActivityIdx = chapter.getActivities() == null ? 0 :
+                chapter.getActivities().stream()
+                        .mapToInt(Activity::getIdx)
+                        .max().orElse(0);
+
+        return Math.max(maxLessonIdx, maxActivityIdx) + 1;
+    }
+
 }

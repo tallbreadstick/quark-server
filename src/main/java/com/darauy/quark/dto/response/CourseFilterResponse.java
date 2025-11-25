@@ -1,4 +1,4 @@
-package com.darauy.quark.dto;
+package com.darauy.quark.dto.response;
 
 import com.darauy.quark.entity.courses.Tag;
 import lombok.AllArgsConstructor;

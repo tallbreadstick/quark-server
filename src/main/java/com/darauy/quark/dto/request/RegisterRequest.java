@@ -1,4 +1,4 @@
-package com.darauy.quark.dto;
+package com.darauy.quark.dto.request;
 
 import com.darauy.quark.entity.users.User;
 import lombok.Data;

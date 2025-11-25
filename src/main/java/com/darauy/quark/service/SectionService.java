@@ -1,6 +1,6 @@
 package com.darauy.quark.service;
 
-import com.darauy.quark.dto.SectionRequest;
+import com.darauy.quark.dto.request.SectionRequest;
 import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.activity.Section;
 import com.darauy.quark.entity.users.User;

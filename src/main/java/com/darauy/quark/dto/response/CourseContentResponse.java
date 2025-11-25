@@ -1,4 +1,4 @@
-package com.darauy.quark.dto;
+package com.darauy.quark.dto.response;
 
 import lombok.Builder;
 import lombok.Data;

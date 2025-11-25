@@ -9,6 +9,7 @@ import java.util.List;
 public interface SectionRepository extends JpaRepository<Section, Integer> {
     List<Section> findByActivity(Activity activity);
 
+    List<Section> findByActivityId(Integer activityId);
     // Batch method for multiple activities
     List<Section> findByActivityIn(List<Activity> activities);
 }

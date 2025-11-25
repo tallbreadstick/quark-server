@@ -1,9 +1,9 @@
 package com.darauy.quark.service;
 
-import com.darauy.quark.dto.AuthResponse;
-import com.darauy.quark.dto.LoginRequest;
-import com.darauy.quark.dto.RegisterRequest;
-import com.darauy.quark.dto.UserResponse;
+import com.darauy.quark.dto.response.AuthResponse;
+import com.darauy.quark.dto.request.LoginRequest;
+import com.darauy.quark.dto.request.RegisterRequest;
+import com.darauy.quark.dto.response.UserResponse;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.UserRepository;
 import de.mkammerer.argon2.Argon2Factory;
