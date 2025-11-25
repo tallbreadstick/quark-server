@@ -201,7 +201,7 @@ Success:
 Failure:
 
 > `401 UNAUTHORIZED` if credentials supplied are incorrect \
-> `500 INTERNALE SERVER ERROR` if some database operation fails
+> `500 INTERNAL SERVER ERROR` if some database operation fails
 
 ***
 

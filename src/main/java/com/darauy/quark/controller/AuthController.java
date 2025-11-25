@@ -3,7 +3,7 @@ package com.darauy.quark.controller;
 import com.darauy.quark.dto.AuthResponse;
 import com.darauy.quark.dto.LoginRequest;
 import com.darauy.quark.dto.RegisterRequest;
-import com.darauy.quark.entity.users.User;
+import com.darauy.quark.dto.UserResponse;
 import com.darauy.quark.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -23,6 +23,7 @@ public class AuthController {
 
     @PostMapping("/auth/register")
     public ResponseEntity<?> register(@Validated @RequestBody RegisterRequest request) {
+        System.out.println("nigga test");
         try {
             authService.register(request);
             return ResponseEntity.ok().build();
@@ -48,7 +49,7 @@ public class AuthController {
     @GetMapping("/users")
     public ResponseEntity<?> fetchUsers(@RequestParam String identifier) {
         try {
-            List<User> users = authService.searchUsers(identifier);
+            List<UserResponse> users = authService.searchUsers(identifier);
             return ResponseEntity.ok(users);
         } catch (Exception ex) {
             return ResponseEntity.status(500).body("Internal server error");

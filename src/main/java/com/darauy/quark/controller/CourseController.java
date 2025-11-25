@@ -8,6 +8,7 @@ import com.darauy.quark.security.JwtUtil;
 import com.darauy.quark.service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -36,7 +37,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course created = courseService.createCourse(user, request);
-            return ResponseEntity.ok(created);
+            return ResponseEntity.ok(HttpEntity.EMPTY);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {

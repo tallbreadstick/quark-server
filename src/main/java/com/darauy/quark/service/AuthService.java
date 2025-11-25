@@ -3,6 +3,7 @@ package com.darauy.quark.service;
 import com.darauy.quark.dto.AuthResponse;
 import com.darauy.quark.dto.LoginRequest;
 import com.darauy.quark.dto.RegisterRequest;
+import com.darauy.quark.dto.UserResponse;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.UserRepository;
 import de.mkammerer.argon2.Argon2Factory;
@@ -79,7 +80,15 @@ public class AuthService {
         return new AuthResponse(token, user.getUsername(), user.getEmail());
     }
 
-    public List<User> searchUsers(String identifier) {
-        return userRepository.searchTop10ByIdentifier(identifier);
+    public List<UserResponse> searchUsers(String identifier) {
+        return userRepository.searchTop10ByIdentifier(identifier)
+                .stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getUserType()
+                ))
+                .toList();
     }
 }
