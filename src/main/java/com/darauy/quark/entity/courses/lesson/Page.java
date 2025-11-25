@@ -18,10 +18,18 @@ public class Page {
     @Column(name = "idx", nullable = false)
     private Integer idx;
 
+    @Column(name = "renderer", nullable = false)
+    private Renderer renderer;
+
     @Column(columnDefinition = "MEDIUMTEXT")
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id", nullable = false)
     private Lesson lesson;
+
+    public enum Renderer {
+        MARKDOWN,
+        LATEX
+    }
 }

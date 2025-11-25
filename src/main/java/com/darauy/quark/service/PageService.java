@@ -1,13 +1,15 @@
 package com.darauy.quark.service;
 
+import com.darauy.quark.dto.request.PageRequest;
+import com.darauy.quark.dto.response.PageContentResponse;
 import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.entity.courses.lesson.Page;
 import com.darauy.quark.repository.LessonRepository;
 import com.darauy.quark.repository.PageRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -19,78 +21,109 @@ public class PageService {
     private final LessonRepository lessonRepository;
 
     /** CREATE PAGE */
-    public Page addPage(Integer lessonId, Page page, Integer userId) {
+    public Page addPage(Integer lessonId, PageRequest req, Integer userId) {
+
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new NoSuchElementException("Lesson not found"));
 
-        // TODO: check that lesson.chapter.course.user.id == userId for ownership
+        if (!lesson.getChapter().getCourse().getOwnerId().equals(userId)) {
+            throw new SecurityException("Unauthorized");
+        }
 
         int nextIdx = pageRepository.findByLesson(lesson).size();
-        page.setIdx(nextIdx);
-        page.setLesson(lesson);
+
+        Page page = Page.builder()
+                .idx(nextIdx)
+                .renderer(req.getRenderer())
+                .content(req.getContent())
+                .lesson(lesson)
+                .build();
+
         return pageRepository.save(page);
     }
 
     /** EDIT PAGE */
-    public Page editPage(Integer pageId, Page updated, Integer userId) {
+    public Page editPage(Integer pageId, PageRequest req, Integer userId) {
+
         Page page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new NoSuchElementException("Page not found"));
 
-        // TODO: check ownership via page.lesson.chapter.course.user.id == userId
+        if (!page.getLesson().getChapter().getCourse().getOwnerId().equals(userId)) {
+            throw new SecurityException("Unauthorized");
+        }
 
-        page.setContent(updated.getContent());
+        page.setRenderer(req.getRenderer());
+        page.setContent(req.getContent());
+
         return pageRepository.save(page);
     }
 
     /** DELETE PAGE */
     public void deletePage(Integer pageId, Integer userId) {
+
         Page page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new NoSuchElementException("Page not found"));
 
-        // TODO: check ownership via page.lesson.chapter.course.user.id == userId
+        if (!page.getLesson().getChapter().getCourse().getOwnerId().equals(userId)) {
+            throw new SecurityException("Unauthorized");
+        }
 
         Lesson lesson = page.getLesson();
         pageRepository.delete(page);
 
-        // Reorder remaining pages
-        List<Page> pages = pageRepository.findByLesson(lesson);
+        // Reorder all pages cleanly
+        List<Page> pages = pageRepository.findByLessonOrderByIdxAsc(lesson);
         for (int i = 0; i < pages.size(); i++) {
             pages.get(i).setIdx(i);
         }
         pageRepository.saveAll(pages);
     }
 
-    /** FETCH PAGE */
-    public Page fetchPage(Integer pageId, Integer userId) {
+    /** FETCH PAGE CONTENT */
+    public PageContentResponse fetchPage(Integer pageId, Integer userId) {
+
         Page page = pageRepository.findById(pageId)
                 .orElseThrow(() -> new NoSuchElementException("Page not found"));
 
-        // TODO: check ownership via page.lesson.chapter.course.user.id == userId
+        if (!page.getLesson().getChapter().getCourse().getOwnerId().equals(userId)) {
+            throw new SecurityException("Unauthorized");
+        }
 
-        return page;
+        return PageContentResponse.builder()
+                .renderer(page.getRenderer())
+                .content(page.getContent())
+                .build();
     }
 
     /** REORDER PAGES */
+    @Transactional
     public void reorderPages(Integer lessonId, List<Integer> pageIds, Integer userId) {
+
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new NoSuchElementException("Lesson not found"));
 
-        // TODO: check ownership via lesson.chapter.course.user.id == userId
-
         List<Page> pages = pageRepository.findByLesson(lesson);
+
         if (pageIds.size() != pages.size()) {
             throw new IllegalArgumentException("Page count mismatch");
         }
 
+        // Map each provided ID to its new idx
         for (int i = 0; i < pageIds.size(); i++) {
-            int finalI = i;
-            int finalI1 = i;
-            Page page = pages.stream()
-                    .filter(p -> p.getId().equals(pageIds.get(finalI)))
+            Integer targetId = pageIds.get(i);
+
+            Page p = pages.stream()
+                    .filter(pg -> pg.getId().equals(targetId))
                     .findFirst()
-                    .orElseThrow(() -> new NoSuchElementException("Page not found: " + pageIds.get(finalI1)));
-            page.setIdx(i);
+                    .orElseThrow(() -> new NoSuchElementException("Page not found: " + targetId));
+
+            if (!p.getLesson().getChapter().getCourse().getOwnerId().equals(userId)) {
+                throw new SecurityException("Unauthorized");
+            }
+
+            p.setIdx(i);
         }
+
         pageRepository.saveAll(pages);
     }
 }
