@@ -24,4 +24,11 @@ public class CourseShared {
     @MapsId("courseId")
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
+
+    @Builder
+    public CourseShared(User user, Course course) {
+        this.user = user;
+        this.course = course;
+        this.id = new CourseSharedId(user.getId(), course.getId());
+    }
 }

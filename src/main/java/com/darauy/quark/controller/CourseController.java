@@ -1,5 +1,7 @@
 package com.darauy.quark.controller;
 
+import com.darauy.quark.dto.CourseContentResponse;
+import com.darauy.quark.dto.CourseFilterResponse;
 import com.darauy.quark.dto.CourseRequest;
 import com.darauy.quark.entity.courses.Course;
 import com.darauy.quark.entity.users.User;
@@ -8,7 +10,6 @@ import com.darauy.quark.security.JwtUtil;
 import com.darauy.quark.service.CourseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +38,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course created = courseService.createCourse(user, request);
-            return ResponseEntity.ok(HttpEntity.EMPTY);
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -62,7 +63,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course forked = courseService.forkCourse(user, courseId, request);
-            return ResponseEntity.ok(forked);
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -87,7 +88,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course edited = courseService.editCourse(user, courseId, request);
-            return ResponseEntity.ok(edited);
+            return ResponseEntity.ok().build();
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -111,7 +112,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             courseService.deleteCourse(user, courseId);
-            return ResponseEntity.ok("Course deleted");
+            return ResponseEntity.ok().build();
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (SecurityException e) {
@@ -143,7 +144,7 @@ public class CourseController {
             String order = params.get("order");
             String search = params.get("search");
 
-            List<Course> courses = courseService.fetchCoursesByFilter(user, myCourses, sharedWithMe, forkable, tags, sortBy, order, search);
+            List<CourseFilterResponse> courses = courseService.fetchCoursesByFilter(user, myCourses, sharedWithMe, forkable, tags, sortBy, order, search);
             return ResponseEntity.ok(courses);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
@@ -165,7 +166,7 @@ public class CourseController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-            Course course = courseService.fetchCourseWithChapters(user, courseId);
+            CourseContentResponse course = courseService.fetchCourseWithChapters(user, courseId);
             return ResponseEntity.ok(course);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
@@ -187,11 +188,11 @@ public class CourseController {
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
-            Integer courseId = body.get("course_id");
-            Integer targetUserId = body.get("user_id");
+            Integer courseId = body.get("courseId");
+            Integer targetUserId = body.get("userId");
 
             if (courseId == null || targetUserId == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing course_id or user_id");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Missing courseId or userId");
             }
 
             courseService.shareCourse(user, courseId, targetUserId);

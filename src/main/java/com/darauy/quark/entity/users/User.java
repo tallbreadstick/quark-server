@@ -1,10 +1,12 @@
 package com.darauy.quark.entity.users;
 
+import com.darauy.quark.entity.courses.Course;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -40,6 +42,9 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    private Set<Course> courses;
 
     public enum UserType {
         EDUCATOR,

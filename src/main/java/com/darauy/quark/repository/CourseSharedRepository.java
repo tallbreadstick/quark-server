@@ -13,4 +13,5 @@ import java.util.Optional;
 public interface CourseSharedRepository extends JpaRepository<CourseShared, Integer> {
     List<CourseShared> findByUser(User user);
     Optional<CourseShared> findByUserAndCourse(User user, Course course);
+    void deleteByCourse(Course course);
 }

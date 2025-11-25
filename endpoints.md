@@ -134,7 +134,7 @@ Handles the creation of a user account.
         "username": <username>,
         "email": <email>,
         "password": <password>,
-        "user_type": <"EDUCATOR" | "STUDENT">
+        "userType": <"EDUCATOR" | "STUDENT">
     }
 
 `username`:
@@ -233,7 +233,8 @@ Success:
         {
             "id": <user_id>,
             "username": <username>,
-            "email": <email>
+            "email": <email>,
+            "userType": <"EDUCATOR" | "STUDENT">
         }
     ]
 
@@ -464,7 +465,7 @@ Creates a personal copy of a course that has been shared with an educator user o
     {
         "name": <course_name>,
         "description": <course_description>,
-        "introduction: <introduction>,
+        "introduction": <introduction>,
         "forkable": <"true" | "false">,
         "visibility": <"PUBLIC" | "PRIVATE" | "UNLISTED">,
         "tags": [ <course_tags> ]
@@ -501,8 +502,8 @@ Success:
 
 Failure:
 
-> `401 UNAUTHORIZED` if the bearer token is invalid or expired \
-> `404 NOT FOUND` if the id parsed does not belong to an existing user \
+> `401 UNAUTHORIZED` if the bearer token is invalid or expired, or if the course being forked is not public or shared with the forker \
+> `404 NOT FOUND` if the id parsed does not belong to an existing user or the course id does not exist \
 > `400 BAD REQUEST` if the request is invalid for any other reason \
 > `500 INTERNAL SERVER ERROR` if some database operation fails
 

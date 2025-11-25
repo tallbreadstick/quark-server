@@ -11,13 +11,13 @@ import java.util.Set;
 
 @Entity
 @Table(
-    name = "courses",
-    indexes = {
-        @Index(name = "idx_course_name", columnList = "name"),
-        @Index(name = "idx_course_owner", columnList = "owner_id"),
-        @Index(name = "idx_course_created_at", columnList = "created_at"),
-        @Index(name = "idx_course_origin", columnList = "origin_id")
-    }
+        name = "courses",
+        indexes = {
+                @Index(name = "idx_course_name", columnList = "name"),
+                @Index(name = "idx_course_owner", columnList = "owner_id"),
+                @Index(name = "idx_course_created_at", columnList = "created_at"),
+                @Index(name = "idx_course_origin", columnList = "origin_id")
+        }
 )
 @Data
 @NoArgsConstructor
@@ -41,13 +41,22 @@ public class Course {
     @Column(nullable = false)
     private Integer version;
 
-    // Nullable self-referencing origin
+    // New fields -----------------------------
+
+    @Column(nullable = false)
+    private Visibility visibility;
+    // "private" | "shared" | "public"
+
+    @Column(nullable = false)
+    private Boolean forkable = false;
+
+    // ----------------------------------------
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "origin_id")
     private Course origin;
 
-    // Required owner (cascade delete)
-    @ManyToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.REMOVE)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
@@ -59,11 +68,19 @@ public class Course {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // Not mapped by @ManyToMany — you will load tags through CourseTag
     @OneToMany(mappedBy = "course", fetch = FetchType.LAZY)
     private Set<CourseTag> courseTags;
 
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Chapter> chapters;
+
     public Integer getOwnerId() {
         return owner != null ? owner.getId() : null;
+    }
+
+    public enum Visibility {
+        PUBLIC,
+        PRIVATE,
+        UNLISTED
     }
 }
