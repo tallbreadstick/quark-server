@@ -14,11 +14,11 @@ public class CourseContentResponse {
     private String introduction;
     private Boolean forkable;
     private List<String> tags;
-    private List<ChapterResponse> chapters;
+    private List<Chapter> chapters;
 
     @Data
     @Builder
-    public static class ChapterResponse {
+    public static class Chapter {
         private Integer id;
         private Integer idx;
         private String name;

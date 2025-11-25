@@ -251,8 +251,8 @@ public class CourseService {
         List<Chapter> chapters = chapterRepository.findByCourse(course);
 
         // Map chapters to DTO
-        List<CourseContentResponse.ChapterResponse> chapterResponses = chapters.stream()
-                .map(ch -> CourseContentResponse.ChapterResponse.builder()
+        List<CourseContentResponse.Chapter> chapterResponses = chapters.stream()
+                .map(ch -> CourseContentResponse.Chapter.builder()
                         .id(ch.getId())
                         .idx(ch.getIdx())
                         .name(ch.getName())
@@ -338,7 +338,7 @@ public class CourseService {
         for (Chapter ch : chapters) {
 
             // ------------------ COPY CHAPTER ------------------
-            Chapter newChapter = Chapter.builder()
+            Chapter newChapter = com.darauy.quark.entity.courses.Chapter.builder()
                     .name(ch.getName())
                     .idx(ch.getIdx())
                     .description(ch.getDescription())

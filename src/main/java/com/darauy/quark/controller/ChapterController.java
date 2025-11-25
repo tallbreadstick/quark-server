@@ -1,6 +1,9 @@
 package com.darauy.quark.controller;
 
+import com.darauy.quark.dto.ChapterContentResponse;
+import com.darauy.quark.dto.ChapterRequest;
 import com.darauy.quark.entity.courses.Chapter;
+import com.darauy.quark.security.JwtUtil;
 import com.darauy.quark.service.ChapterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,18 +20,19 @@ import java.util.NoSuchElementException;
 public class ChapterController {
 
     private final ChapterService chapterService;
+    private final JwtUtil jwtUtil;
 
     // ------------------ Add Chapter ------------------
     @PostMapping("/course/{courseId}/chapter")
     public ResponseEntity<?> addChapter(
             @PathVariable Integer courseId,
-            @RequestBody Chapter chapter,
+            @RequestBody ChapterRequest request,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
-            Integer userId = extractUserIdFromToken(authorization);
-            Chapter saved = chapterService.addChapter(courseId, chapter, userId);
-            return ResponseEntity.ok(saved);
+            Integer userId = jwtUtil.extractUserIdFromHeader(authorization);
+            Chapter saved = chapterService.addChapter(courseId, request, userId);
+            return ResponseEntity.ok("Chapter added to course");
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -46,9 +50,9 @@ public class ChapterController {
             @RequestHeader("Authorization") String authorization
     ) {
         try {
-            Integer userId = extractUserIdFromToken(authorization);
+            Integer userId = jwtUtil.extractUserIdFromHeader(authorization);
             chapterService.reorderChapters(courseId, chapterIds, userId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Chapter indexing reordered");
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -62,13 +66,13 @@ public class ChapterController {
     @PutMapping("/chapter/{chapterId}")
     public ResponseEntity<?> editChapter(
             @PathVariable Integer chapterId,
-            @RequestBody Chapter updated,
+            @RequestBody ChapterRequest updated,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
-            Integer userId = extractUserIdFromToken(authorization);
+            Integer userId = jwtUtil.extractUserIdFromHeader(authorization);
             Chapter saved = chapterService.editChapter(chapterId, updated, userId);
-            return ResponseEntity.ok(saved);
+            return ResponseEntity.ok("Chapter edited successfully");
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -85,9 +89,9 @@ public class ChapterController {
             @RequestHeader("Authorization") String authorization
     ) {
         try {
-            Integer userId = extractUserIdFromToken(authorization);
+            Integer userId = jwtUtil.extractUserIdFromHeader(authorization);
             chapterService.deleteChapter(chapterId, userId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Chapter removed from course");
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -104,8 +108,8 @@ public class ChapterController {
             @RequestHeader("Authorization") String authorization
     ) {
         try {
-            Integer userId = extractUserIdFromToken(authorization);
-            Chapter chapter = chapterService.fetchChapterWithItems(chapterId, userId);
+            Integer userId = jwtUtil.extractUserIdFromHeader(authorization);
+            ChapterContentResponse chapter = chapterService.fetchChapterWithItems(chapterId, userId);
             return ResponseEntity.ok(chapter);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
@@ -114,14 +118,5 @@ public class ChapterController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
         }
-    }
-
-    // ------------------ Helper ------------------
-    // Dummy method — replace with your JWT parsing logic
-    private Integer extractUserIdFromToken(String authorization) {
-        // Expect: "Bearer <token>"
-        String token = authorization.replace("Bearer ", "").trim();
-        // TODO: validate token and extract user ID
-        return 1; // placeholder
     }
 }

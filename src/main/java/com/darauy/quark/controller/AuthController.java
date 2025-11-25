@@ -25,7 +25,7 @@ public class AuthController {
     public ResponseEntity<?> register(@Validated @RequestBody RegisterRequest request) {
         try {
             authService.register(request);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("User created successfully");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (Exception ex) {

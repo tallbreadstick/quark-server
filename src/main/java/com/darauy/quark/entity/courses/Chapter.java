@@ -2,6 +2,7 @@ package com.darauy.quark.entity.courses;
 
 import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.lesson.Lesson;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -38,10 +39,12 @@ public class Chapter {
 
     @OneToMany(mappedBy = "chapter", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("idx ASC")
+    @JsonIgnore
     private List<Lesson> lessons;
 
     @OneToMany(mappedBy = "chapter", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("idx ASC")
+    @JsonIgnore
     private List<Activity> activities;
 
 

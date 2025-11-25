@@ -1,6 +1,7 @@
 package com.darauy.quark.entity.users;
 
 import com.darauy.quark.entity.courses.Course;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -44,6 +45,7 @@ public class User {
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "owner", cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @JsonIgnore
     private Set<Course> courses;
 
     public enum UserType {

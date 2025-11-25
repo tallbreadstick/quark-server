@@ -1,5 +1,7 @@
 package com.darauy.quark.service;
 
+import com.darauy.quark.dto.ChapterContentResponse;
+import com.darauy.quark.dto.ChapterRequest;
 import com.darauy.quark.entity.courses.Chapter;
 import com.darauy.quark.entity.courses.Course;
 import com.darauy.quark.entity.courses.lesson.Lesson;
@@ -20,7 +22,8 @@ public class ChapterService {
     private final CourseRepository courseRepository;
 
     // Add Chapter
-    public Chapter addChapter(Integer courseId, Chapter chapter, Integer userId) {
+    // Add Chapter using ChapterRequest instead of raw Chapter
+    public Chapter addChapter(Integer courseId, ChapterRequest request, Integer userId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NoSuchElementException("Course not found"));
 
@@ -32,8 +35,14 @@ public class ChapterService {
         // Determine idx
         int maxIdx = chapterRepository.findByCourse(course).stream()
                 .mapToInt(Chapter::getIdx).max().orElse(0);
-        chapter.setIdx(maxIdx + 1);
-        chapter.setCourse(course);
+
+        Chapter chapter = Chapter.builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .icon(request.getIcon())
+                .idx(maxIdx + 1)
+                .course(course)
+                .build();
 
         return chapterRepository.save(chapter);
     }
@@ -61,7 +70,7 @@ public class ChapterService {
     }
 
     // Edit Chapter
-    public Chapter editChapter(Integer chapterId, Chapter updated, Integer userId) {
+    public Chapter editChapter(Integer chapterId, ChapterRequest updated, Integer userId) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new NoSuchElementException("Chapter not found"));
 
@@ -98,7 +107,7 @@ public class ChapterService {
     }
 
     // Fetch Chapter with items (lessons + activities)
-    public Chapter fetchChapterWithItems(Integer chapterId, Integer userId) {
+    public ChapterContentResponse fetchChapterWithItems(Integer chapterId, Integer userId) {
         Chapter chapter = chapterRepository.findById(chapterId)
                 .orElseThrow(() -> new NoSuchElementException("Chapter not found"));
 
@@ -106,11 +115,50 @@ public class ChapterService {
             throw new SecurityException("User does not own this chapter's course");
         }
 
-        // Force load lessons/activities if lazy
-        chapter.getLessons().size();
-        chapter.getActivities().size();
+        // Map to DTO
+        List<ChapterContentResponse.ChapterItem> items = new ArrayList<>();
 
-        return chapter;
+        // Combine lessons and activities, sorting by idx
+        chapter.getLessons().stream()
+                .sorted((a, b) -> Integer.compare(a.getIdx(), b.getIdx()))
+                .forEach(lesson -> {
+                    items.add(
+                            ChapterContentResponse.Lesson.lessonBuilder()
+                                    .id(lesson.getId())
+                                    .idx(lesson.getIdx())
+                                    .description(lesson.getDescription())
+                                    .icon(lesson.getIcon())
+                                    .finishMessage(lesson.getFinishMessage())
+                                    .build()
+                    );
+                });
+
+        chapter.getActivities().stream()
+                .sorted((a, b) -> Integer.compare(a.getIdx(), b.getIdx()))
+                .forEach(activity -> {
+                    items.add(
+                            ChapterContentResponse.Activity.activityBuilder()
+                                    .id(activity.getId())
+                                    .idx(activity.getIdx())
+                                    .description(activity.getDescription())
+                                    .icon(activity.getIcon())
+                                    .finishMessage(activity.getFinishMessage())
+                                    .ruleset(activity.getRuleset())
+                                    .build()
+                    );
+                });
+
+        // Sort combined list by idx to preserve order
+        items.sort((a, b) -> Integer.compare(a.getIdx(), b.getIdx()));
+
+        return ChapterContentResponse.builder()
+                .id(chapter.getId())
+                .idx(chapter.getIdx())
+                .name(chapter.getName())
+                .description(chapter.getDescription())
+                .icon(chapter.getIcon())
+                .items(items)
+                .build();
     }
 
     // TODO: Reorder chapter items (activities/lessons) similar to reorderChapters

@@ -38,7 +38,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course created = courseService.createCourse(user, request);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Course created successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -63,7 +63,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course forked = courseService.forkCourse(user, courseId, request);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Course forked successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -88,7 +88,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             Course edited = courseService.editCourse(user, courseId, request);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Course updated successfully");
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         } catch (NoSuchElementException e) {
@@ -112,7 +112,7 @@ public class CourseController {
                     .orElseThrow(() -> new NoSuchElementException("User not found"));
 
             courseService.deleteCourse(user, courseId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Course has been deleted");
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (SecurityException e) {
@@ -196,7 +196,7 @@ public class CourseController {
             }
 
             courseService.shareCourse(user, courseId, targetUserId);
-            return ResponseEntity.ok("Course shared");
+            return ResponseEntity.ok("Course shared successfully");
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
         } catch (SecurityException e) {

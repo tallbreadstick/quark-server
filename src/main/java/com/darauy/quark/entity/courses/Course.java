@@ -1,6 +1,7 @@
 package com.darauy.quark.entity.courses;
 
 import com.darauy.quark.entity.users.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -72,6 +73,7 @@ public class Course {
     private Set<CourseTag> courseTags;
 
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private Set<Chapter> chapters;
 
     public Integer getOwnerId() {

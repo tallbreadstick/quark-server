@@ -26,7 +26,7 @@ public class ProfileController {
         try {
             Integer userId = jwtUtil.extractUserIdFromHeader(authHeader);
             profileService.uploadProfilePicture(userId, image);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Profile image updated");
         } catch (IllegalArgumentException ex) {
             String msg = ex.getMessage();
             if (msg.contains("too large")) return ResponseEntity.status(413).body(msg);
@@ -57,7 +57,7 @@ public class ProfileController {
         try {
             Integer userId = jwtUtil.extractUserIdFromHeader(authHeader);
             profileService.clearProfilePicture(userId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Profile image cleared");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(404).body(ex.getMessage());
         } catch (Exception ex) {
@@ -73,7 +73,7 @@ public class ProfileController {
         try {
             Integer userId = jwtUtil.extractUserIdFromHeader(authHeader);
             profileService.updateBio(userId, bio);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("User bio updated");
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(ex.getMessage());
         } catch (Exception ex) {
