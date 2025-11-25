@@ -21,7 +21,6 @@ public class ChapterService {
     private final ChapterRepository chapterRepository;
     private final CourseRepository courseRepository;
 
-    // Add Chapter
     // Add Chapter using ChapterRequest instead of raw Chapter
     public Chapter addChapter(Integer courseId, ChapterRequest request, Integer userId) {
         Course course = courseRepository.findById(courseId)
@@ -149,7 +148,7 @@ public class ChapterService {
                 });
 
         // Sort combined list by idx to preserve order
-        items.sort((a, b) -> Integer.compare(a.getIdx(), b.getIdx()));
+        items.sort(Comparator.comparingInt(ChapterContentResponse.ChapterItem::getIdx));
 
         return ChapterContentResponse.builder()
                 .id(chapter.getId())

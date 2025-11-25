@@ -10,7 +10,12 @@ import java.util.Collections;
 import java.util.List;
 
 @Entity
-@Table(name = "chapters")
+@Table(
+        name = "chapters",
+        indexes = {
+                @Index(name = "idx_course_id", columnList = "course_id")
+        }
+)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -46,7 +51,6 @@ public class Chapter {
     @OrderBy("idx ASC")
     @JsonIgnore
     private List<Activity> activities;
-
 
     // Helper getters
     public List<Lesson> getLessons() {
