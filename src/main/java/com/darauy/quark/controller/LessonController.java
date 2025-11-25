@@ -1,5 +1,7 @@
 package com.darauy.quark.controller;
 
+import com.darauy.quark.dto.LessonContentResponse;
+import com.darauy.quark.dto.LessonRequest;
 import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.security.JwtUtil;
 import com.darauy.quark.service.LessonService;
@@ -23,13 +25,15 @@ public class LessonController {
     @PostMapping("/chapter/{chapterId}/lesson")
     public ResponseEntity<?> addLesson(
             @PathVariable Integer chapterId,
-            @RequestBody Lesson lesson,
+            @RequestBody LessonRequest request,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            Lesson saved = lessonService.addLesson(chapterId, lesson, userId);
-            return ResponseEntity.ok(saved);
+            Lesson saved = lessonService.addLesson(chapterId, request, userId);
+            return ResponseEntity.ok("Lesson added to chapter");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -43,13 +47,15 @@ public class LessonController {
     @PutMapping("/lesson/{lessonId}")
     public ResponseEntity<?> editLesson(
             @PathVariable Integer lessonId,
-            @RequestBody Lesson updated,
+            @RequestBody LessonRequest request,
             @RequestHeader("Authorization") String authorization
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            Lesson saved = lessonService.editLesson(lessonId, updated, userId);
-            return ResponseEntity.ok(saved);
+            Lesson saved = lessonService.editLesson(lessonId, request, userId);
+            return ResponseEntity.ok("Lesson updated successfully");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -68,7 +74,7 @@ public class LessonController {
         try {
             Integer userId = extractUserIdFromToken(authorization);
             lessonService.deleteLesson(lessonId, userId);
-            return ResponseEntity.ok().build();
+            return ResponseEntity.ok("Lesson removed from chapter");
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
         } catch (NoSuchElementException e) {
@@ -86,7 +92,7 @@ public class LessonController {
     ) {
         try {
             Integer userId = extractUserIdFromToken(authorization);
-            Lesson lesson = lessonService.fetchLesson(lessonId, userId);
+            LessonContentResponse lesson = lessonService.fetchLesson(lessonId, userId);
             return ResponseEntity.ok(lesson);
         } catch (SecurityException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));

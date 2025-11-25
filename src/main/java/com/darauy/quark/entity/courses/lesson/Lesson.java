@@ -4,6 +4,9 @@ import com.darauy.quark.entity.courses.Chapter;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.Collections;
+import java.util.List;
+
 @Entity
 @Table(
         name = "lessons",
@@ -43,4 +46,14 @@ public class Lesson {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chapter_id", nullable = false)
     private Chapter chapter;
+
+    @OneToMany(mappedBy = "lesson", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("idx ASC")
+    private List<Page> pages;
+
+    // Helper getter
+    public List<Page> getPages() {
+        return pages != null ? pages : Collections.emptyList();
+    }
+
 }
