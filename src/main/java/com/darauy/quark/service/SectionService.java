@@ -1,6 +1,7 @@
 package com.darauy.quark.service;
 
 import com.darauy.quark.dto.request.SectionRequest;
+import com.darauy.quark.dto.response.SectionContentResponse;
 import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.activity.Section;
 import com.darauy.quark.entity.users.User;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
@@ -29,15 +31,14 @@ public class SectionService {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
-        // TODO: check activity belongs to user's course
-
-        // Serialize DTO into JSON string
-        String contentJson = objectMapper.writeValueAsString(request);
+        if (!activity.getChapter().getCourse().getOwnerId().equals(user.getId())) {
+            throw new SecurityException("Unauthorized");
+        }
 
         Section section = Section.builder()
                 .activity(activity)
                 .idx(determineNextIdx(activity))
-                .content(contentJson)
+                .content(objectMapper.writeValueAsString(request))
                 .build();
 
         return sectionRepository.save(section);
@@ -48,11 +49,11 @@ public class SectionService {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NoSuchElementException("Section not found"));
 
-        // TODO: check section belongs to user's activity/course
+        if (!section.getActivity().getChapter().getCourse().getOwnerId().equals(user.getId())) {
+            throw new SecurityException("Unauthorized");
+        }
 
-        String contentJson = objectMapper.writeValueAsString(request);
-        section.setContent(contentJson);
-
+        section.setContent(objectMapper.writeValueAsString(request));
         return sectionRepository.save(section);
     }
 
@@ -61,12 +62,13 @@ public class SectionService {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NoSuchElementException("Section not found"));
 
-        // TODO: check section belongs to user's activity/course
+        if (!section.getActivity().getChapter().getCourse().getOwnerId().equals(user.getId())) {
+            throw new SecurityException("Unauthorized");
+        }
 
         Activity activity = section.getActivity();
         sectionRepository.delete(section);
 
-        // Reorder idx of remaining sections
         List<Section> siblings = sectionRepository.findByActivity(activity);
         siblings.sort(Comparator.comparing(Section::getIdx));
         for (int i = 0; i < siblings.size(); i++) {
@@ -80,17 +82,21 @@ public class SectionService {
         Activity activity = activityRepository.findById(activityId)
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
-        // TODO: check activity belongs to user's course
+        if (!activity.getChapter().getCourse().getOwnerId().equals(user.getId())) {
+            throw new SecurityException("Unauthorized");
+        }
 
         List<Section> sections = sectionRepository.findByActivity(activity);
         if (sections.size() != sectionIds.size() ||
-                !sections.stream().map(Section::getId).collect(Collectors.toList()).containsAll(sectionIds)) {
+                !new HashSet<>(sections.stream().map(Section::getId).toList()).containsAll(sectionIds)) {
             throw new IllegalArgumentException("Invalid section IDs");
         }
 
         for (int i = 0; i < sectionIds.size(); i++) {
             int finalI = i;
-            Section s = sections.stream().filter(sec -> sec.getId().equals(sectionIds.get(finalI))).findFirst().get();
+            Section s = sections.stream()
+                    .filter(sec -> sec.getId().equals(sectionIds.get(finalI)))
+                    .findFirst().get();
             s.setIdx(i + 1);
         }
 
@@ -102,13 +108,30 @@ public class SectionService {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NoSuchElementException("Section not found"));
 
-        // TODO: check section belongs to user's activity/course
+        if (!section.getActivity().getChapter().getCourse().getOwnerId().equals(user.getId())) {
+            throw new SecurityException("Unauthorized");
+        }
 
         return section;
     }
 
+    /** Convert Section entity to SectionContentResponse */
+    public SectionContentResponse toResponse(Section section) {
+        try {
+            SectionContentResponse response = objectMapper.readValue(
+                    section.getContent(), SectionContentResponse.class
+            );
+            response.setId(section.getId());
+            return response;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to parse section content JSON", e);
+        }
+    }
+
     private Integer determineNextIdx(Activity activity) {
-        List<Section> sections = sectionRepository.findByActivity(activity);
-        return sections.stream().map(Section::getIdx).max(Integer::compare).orElse(0) + 1;
+        return sectionRepository.findByActivity(activity).stream()
+                .map(Section::getIdx)
+                .max(Integer::compare)
+                .orElse(0) + 1;
     }
 }

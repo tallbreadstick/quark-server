@@ -11,13 +11,18 @@ import java.util.List;
 public class SectionRequest {
 
     @NotNull(message = "section_type is required")
-    private String sectionType; // "mcq" | "code"
+    private SectionType sectionType;
 
     @Valid
     private MCQSection mcq;
 
     @Valid
     private CodeSection code;
+
+    public enum SectionType {
+        MCQ,
+        CODE
+    }
 
     @Data
     public static class MCQSection {
@@ -45,8 +50,8 @@ public class SectionRequest {
 
     @Data
     public static class CodeSection {
-        @NotEmpty(message = "renderer required")
-        private String renderer; // "markdown" | "latex"
+        @NotNull(message = "renderer required")
+        private Renderer renderer; // "markdown" | "latex"
 
         @NotEmpty(message = "instructions required")
         private String instructions;
@@ -57,6 +62,11 @@ public class SectionRequest {
 
         @NotEmpty(message = "test_cases required")
         private List<@Valid TestCase> testCases;
+    }
+
+    public enum Renderer {
+        MARKDOWN,
+        LATEX
     }
 
     @Data
