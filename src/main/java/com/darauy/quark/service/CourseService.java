@@ -228,6 +228,8 @@ public class CourseService {
                         .name(c.getName())
                         .description(c.getDescription())
                         .introduction(c.getIntroduction())
+                        .forkable(c.getForkable())
+                        .owner(c.getOwner().getUsername())
                         .tags(c.getCourseTags().stream()
                                 .map(CourseTag::getTag)
                                 .toList())
@@ -273,6 +275,7 @@ public class CourseService {
                 .description(course.getDescription())
                 .introduction(course.getIntroduction())
                 .forkable(course.getForkable())
+                .owner(course.getOwner().getUsername())
                 .tags(tags)
                 .chapters(chapterResponses)
                 .build();

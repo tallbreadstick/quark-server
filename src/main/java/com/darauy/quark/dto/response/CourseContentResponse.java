@@ -13,6 +13,7 @@ public class CourseContentResponse {
     private String description;
     private String introduction;
     private Boolean forkable;
+    private String owner;
     private List<String> tags;
     private List<Chapter> chapters;
 

@@ -15,5 +15,7 @@ public class CourseFilterResponse {
     private String name;
     private String description;
     private String introduction;
+    private Boolean forkable;
+    private String owner;
     private List<Tag> tags;
 }
