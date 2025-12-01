@@ -1,5 +1,6 @@
 package com.darauy.quark.dto.response;
 
+import com.darauy.quark.dto.request.ActivityRequest;
 import lombok.Builder;
 import lombok.Data;
 
@@ -27,7 +28,21 @@ public class ActivityContentResponse {
     @Data
     public static class Ruleset {
         private Boolean enabled;
+        private ActivityRequest.Ruleset.TimeExceededPenalty timeExceededPenalty;
+        private ActivityRequest.Ruleset.DeductionStrategy deductionStrategy;
+        private Float pointsDeduction;
         private LocalDateTime closeDateTime;
         private Long timeLimit;
+
+        public enum TimeExceededPenalty {
+            NO_TIME_LIMIT,
+            CLOSE_ACTIVITY,
+            DEDUCT_SCORE
+        }
+
+        public enum DeductionStrategy {
+            FLAT,
+            PERCENTAGE
+        }
     }
 }

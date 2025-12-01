@@ -21,7 +21,21 @@ public class ActivityRequest {
     @Data
     public static class Ruleset {
         private Boolean enabled;
+        private TimeExceededPenalty timeExceededPenalty;
+        private DeductionStrategy deductionStrategy;
+        private Float pointsDeduction;
         private LocalDateTime closeDateTime;
         private Long timeLimit;
+
+        public enum TimeExceededPenalty {
+            NO_TIME_LIMIT,
+            CLOSE_ACTIVITY,
+            DEDUCT_SCORE
+        }
+
+        public enum DeductionStrategy {
+            FLAT,
+            PERCENTAGE
+        }
     }
 }
