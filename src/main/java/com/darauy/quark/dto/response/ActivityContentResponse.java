@@ -4,7 +4,9 @@ import com.darauy.quark.dto.request.ActivityRequest;
 import lombok.Builder;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 
 @Data
@@ -31,7 +33,8 @@ public class ActivityContentResponse {
         private ActivityRequest.Ruleset.TimeExceededPenalty timeExceededPenalty;
         private ActivityRequest.Ruleset.DeductionStrategy deductionStrategy;
         private Float pointsDeduction;
-        private LocalDateTime closeDateTime;
+        private LocalDate closeDate;
+        private LocalTime closeTime;
         private Long timeLimit;
 
         public enum TimeExceededPenalty {

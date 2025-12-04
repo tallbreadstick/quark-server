@@ -5,7 +5,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Data
 @NoArgsConstructor
@@ -24,7 +26,8 @@ public class ActivityRequest {
         private TimeExceededPenalty timeExceededPenalty;
         private DeductionStrategy deductionStrategy;
         private Float pointsDeduction;
-        private LocalDateTime closeDateTime;
+        private LocalDate closeDate;
+        private LocalTime closeTime;
         private Long timeLimit;
 
         public enum TimeExceededPenalty {
