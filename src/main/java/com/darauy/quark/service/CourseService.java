@@ -163,66 +163,87 @@ public class CourseService {
     }
 
     // ---------------- FETCH COURSES BY FILTER ----------------
-    public List<CourseFilterResponse> fetchCoursesByFilter(User user,
-                                                           Boolean myCourses,
-                                                           Boolean sharedWithMe,
-                                                           Boolean forkable,
-                                                           List<String> tags,
-                                                           String sortBy,
-                                                           String order,
-                                                           String search) {
+    public List<CourseFilterResponse> fetchCoursesByFilter(
+            User user,
+            Boolean myCourses,
+            Boolean sharedWithMe,
+            Boolean forkable,
+            List<String> tags,
+            String sortBy,
+            String order,
+            String search
+    ) {
 
-        List<Course> allCourses = courseRepository.findAll();
+        // 1. Fetch all courses with relations in ONE query
+        List<Course> allCourses = courseRepository.fetchCoursesWithRelations();
+
+        // 2. Fetch all shares for the user in ONE query
+        List<CourseShared> userShares = courseSharedRepository.findByUser(user);
+
+        // 3. Convert to fast-lookup set
+        Set<Integer> sharedCourseIds = userShares.stream()
+                .map(cs -> cs.getCourse().getId())
+                .collect(Collectors.toSet());
 
         return allCourses.stream()
-                // Visibility: public OR private but shared with user OR owned by user
-                .filter(c -> c.getVisibility() == Course.Visibility.PUBLIC
-                        || c.getOwner().getId().equals(user.getId())
-                        || courseSharedRepository.findByUserAndCourse(user, c).isPresent())
 
-                // Filter by ownership if requested
-                .filter(c -> myCourses == null || !myCourses || c.getOwner().getId().equals(user.getId()))
+                // 4. Visibility rule
+                .filter(c -> {
+                    boolean isPublic = c.getVisibility() == Course.Visibility.PUBLIC;
+                    boolean isOwner = Objects.equals(c.getOwner().getId(), user.getId());
+                    boolean isShared = sharedCourseIds.contains(c.getId());
+                    return isPublic || isOwner || isShared;
+                })
 
-                // Filter courses shared with user
-                .filter(c -> sharedWithMe == null || !sharedWithMe
-                        || courseSharedRepository.findByUserAndCourse(user, c).isPresent())
+                // 5. My courses
+                .filter(c -> myCourses == null || !myCourses ||
+                        Objects.equals(c.getOwner().getId(), user.getId()))
 
-                // Filter by forkable if requested
-                .filter(c -> forkable == null || (c.getForkable() != null && c.getForkable().equals(forkable)))
+                // 6. Shared with me
+                .filter(c -> sharedWithMe == null || !sharedWithMe ||
+                        sharedCourseIds.contains(c.getId()))
 
-                // Filter by tags if provided
+                // 7. Forkable
+                .filter(c -> forkable == null ||
+                        (c.getForkable() != null && c.getForkable().equals(forkable)))
+
+                // 8. Tags
                 .filter(c -> {
                     if (tags == null || tags.isEmpty()) return true;
-                    Set<String> courseTagNames = courseTagRepository.findByCourse(c)
-                            .stream()
+
+                    Set<String> courseTagNames = c.getCourseTags().stream()
                             .map(ct -> ct.getTag().getName())
                             .collect(Collectors.toSet());
+
                     return courseTagNames.containsAll(tags);
                 })
 
-                // Filter by search string if provided
+                // 9. Search
                 .filter(c -> {
                     if (!StringUtils.hasText(search)) return true;
                     String lower = search.toLowerCase();
+
                     return c.getName().toLowerCase().contains(lower)
-                            || (c.getDescription() != null && c.getDescription().toLowerCase().contains(lower));
+                            || (c.getDescription() != null &&
+                            c.getDescription().toLowerCase().contains(lower));
                 })
 
-                // Sorting
+                // 10. Sorting
                 .sorted((a, b) -> {
                     if ("name".equals(sortBy)) {
-                        return "descending".equals(order) ?
-                                b.getName().compareTo(a.getName()) :
-                                a.getName().compareTo(b.getName());
-                    } else if ("date_created".equals(sortBy)) {
-                        return "descending".equals(order) ?
-                                b.getCreatedAt().compareTo(a.getCreatedAt()) :
-                                a.getCreatedAt().compareTo(b.getCreatedAt());
+                        return "descending".equals(order)
+                                ? b.getName().compareTo(a.getName())
+                                : a.getName().compareTo(b.getName());
+                    }
+                    if ("date_created".equals(sortBy)) {
+                        return "descending".equals(order)
+                                ? b.getCreatedAt().compareTo(a.getCreatedAt())
+                                : a.getCreatedAt().compareTo(b.getCreatedAt());
                     }
                     return 0;
                 })
 
-                // Map to DTO
+                // 11. Map to response
                 .map(c -> CourseFilterResponse.builder()
                         .id(c.getId())
                         .name(c.getName())
@@ -233,8 +254,8 @@ public class CourseService {
                         .tags(c.getCourseTags().stream()
                                 .map(CourseTag::getTag)
                                 .toList())
-                        .build())
-
+                        .build()
+                )
                 .toList();
     }
 

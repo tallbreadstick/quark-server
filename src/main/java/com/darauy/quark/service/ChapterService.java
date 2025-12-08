@@ -105,49 +105,53 @@ public class ChapterService {
 
     // Fetch Chapter with items (lessons + activities)
     public ChapterContentResponse fetchChapterWithItems(Integer chapterId, Integer userId) {
-        Chapter chapter = chapterRepository.findById(chapterId)
+
+        // Fetch lessons first
+        Chapter chapter = chapterRepository.findByIdWithLessons(chapterId)
                 .orElseThrow(() -> new NoSuchElementException("Chapter not found"));
+
+        // Fetch activities separately to avoid multiple collection fetch issue
+        Chapter chapterWithActivities = chapterRepository.findByIdWithActivities(chapterId)
+                .orElseThrow(() -> new NoSuchElementException("Chapter not found"));
+
+        // Copy activities into the chapter
+        chapter.setActivities(chapterWithActivities.getActivities());
 
         if (!chapter.getCourse().getOwnerId().equals(userId)) {
             throw new SecurityException("User does not own this chapter's course");
         }
 
-        // Map to DTO
+        // Map to DTO (same as before)
         List<ChapterContentResponse.ChapterItem> items = new ArrayList<>();
 
-        // Combine lessons and activities, sorting by idx
         chapter.getLessons().stream()
-                .sorted((a, b) -> Integer.compare(a.getIdx(), b.getIdx()))
-                .forEach(lesson -> {
-                    items.add(
-                            ChapterContentResponse.Lesson.lessonBuilder()
-                                    .id(lesson.getId())
-                                    .idx(lesson.getIdx())
-                                    .name(lesson.getName())
-                                    .description(lesson.getDescription())
-                                    .icon(lesson.getIcon())
-                                    .finishMessage(lesson.getFinishMessage())
-                                    .build()
-                    );
-                });
+                .sorted(Comparator.comparingInt(a -> a.getIdx()))
+                .forEach(lesson -> items.add(
+                        ChapterContentResponse.Lesson.lessonBuilder()
+                                .id(lesson.getId())
+                                .idx(lesson.getIdx())
+                                .name(lesson.getName())
+                                .description(lesson.getDescription())
+                                .icon(lesson.getIcon())
+                                .finishMessage(lesson.getFinishMessage())
+                                .build()
+                ));
 
         chapter.getActivities().stream()
-                .sorted((a, b) -> Integer.compare(a.getIdx(), b.getIdx()))
-                .forEach(activity -> {
-                    items.add(
-                            ChapterContentResponse.Activity.activityBuilder()
-                                    .id(activity.getId())
-                                    .idx(activity.getIdx())
-                                    .name(activity.getName())
-                                    .description(activity.getDescription())
-                                    .icon(activity.getIcon())
-                                    .finishMessage(activity.getFinishMessage())
-                                    .ruleset(activity.getRuleset())
-                                    .build()
-                    );
-                });
+                .sorted(Comparator.comparingInt(a -> a.getIdx()))
+                .forEach(activity -> items.add(
+                        ChapterContentResponse.Activity.activityBuilder()
+                                .id(activity.getId())
+                                .idx(activity.getIdx())
+                                .name(activity.getName())
+                                .description(activity.getDescription())
+                                .icon(activity.getIcon())
+                                .finishMessage(activity.getFinishMessage())
+                                .ruleset(activity.getRuleset())
+                                .build()
+                ));
 
-        // Sort combined list by idx to preserve order
+        // Sort combined list by idx
         items.sort(Comparator.comparingInt(ChapterContentResponse.ChapterItem::getIdx));
 
         return ChapterContentResponse.builder()
