@@ -8,6 +8,7 @@ import com.darauy.quark.entity.courses.activity.Activity;
 import com.darauy.quark.entity.courses.activity.Section;
 import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.entity.courses.lesson.Page;
+import com.darauy.quark.entity.progress.CourseProgress;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.*;
 import jakarta.transaction.Transactional;
@@ -47,6 +48,9 @@ public class CourseService {
 
     @Autowired
     private CourseSharedRepository courseSharedRepository;
+
+    @Autowired
+    private CourseProgressRepository courseProgressRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -185,9 +189,19 @@ public class CourseService {
                 .map(cs -> cs.getCourse().getId())
                 .collect(Collectors.toSet());
 
+        // 4. Fetch enrolled courses for the user (if STUDENT)
+        Set<Integer> enrolledCourseIds = new HashSet<>();
+        if (user.getUserType() == User.UserType.STUDENT) {
+            List<CourseProgress> enrolledProgress = courseProgressRepository.findByUserAndEnrolledTrue(user);
+            enrolledCourseIds = enrolledProgress.stream()
+                    .map(cp -> cp.getCourse().getId())
+                    .collect(Collectors.toSet());
+        }
+        final Set<Integer> enrolledIds = enrolledCourseIds; // For lambda access
+
         return allCourses.stream()
 
-                // 4. Visibility rule
+                // 5. Visibility rule
                 .filter(c -> {
                     boolean isPublic = c.getVisibility() == Course.Visibility.PUBLIC;
                     boolean isOwner = Objects.equals(c.getOwner().getId(), user.getId());
@@ -195,19 +209,28 @@ public class CourseService {
                     return isPublic || isOwner || isShared;
                 })
 
-                // 5. My courses
-                .filter(c -> myCourses == null || !myCourses ||
-                        Objects.equals(c.getOwner().getId(), user.getId()))
+                // 6. My courses - EDUCATOR: owned courses, STUDENT: enrolled courses
+                .filter(c -> {
+                    if (myCourses == null || !myCourses) return true;
+                    
+                    if (user.getUserType() == User.UserType.EDUCATOR) {
+                        // Educators: show owned courses
+                        return Objects.equals(c.getOwner().getId(), user.getId());
+                    } else {
+                        // Students: show enrolled courses
+                        return enrolledIds.contains(c.getId());
+                    }
+                })
 
-                // 6. Shared with me
+                // 7. Shared with me
                 .filter(c -> sharedWithMe == null || !sharedWithMe ||
                         sharedCourseIds.contains(c.getId()))
 
-                // 7. Forkable
+                // 8. Forkable
                 .filter(c -> forkable == null ||
                         (c.getForkable() != null && c.getForkable().equals(forkable)))
 
-                // 8. Tags
+                // 9. Tags
                 .filter(c -> {
                     if (tags == null || tags.isEmpty()) return true;
 
@@ -218,7 +241,7 @@ public class CourseService {
                     return courseTagNames.containsAll(tags);
                 })
 
-                // 9. Search
+                // 10. Search
                 .filter(c -> {
                     if (!StringUtils.hasText(search)) return true;
                     String lower = search.toLowerCase();
@@ -228,7 +251,7 @@ public class CourseService {
                             c.getDescription().toLowerCase().contains(lower));
                 })
 
-                // 10. Sorting
+                // 11. Sorting
                 .sorted((a, b) -> {
                     if ("name".equals(sortBy)) {
                         return "descending".equals(order)
@@ -243,7 +266,7 @@ public class CourseService {
                     return 0;
                 })
 
-                // 11. Map to response
+                // 12. Map to response
                 .map(c -> CourseFilterResponse.builder()
                         .id(c.getId())
                         .name(c.getName())
@@ -257,6 +280,19 @@ public class CourseService {
                         .build()
                 )
                 .toList();
+    }
+
+    // ---------------- FETCH ENROLLED COURSES ----------------
+    /**
+     * Get all courses the user is enrolled in via CourseProgress
+     * @param user the user
+     * @return list of courses the user is enrolled in
+     */
+    public List<Course> getEnrolledCourses(User user) {
+        List<CourseProgress> enrolledProgress = courseProgressRepository.findByUserAndEnrolledTrue(user);
+        return enrolledProgress.stream()
+                .map(CourseProgress::getCourse)
+                .collect(Collectors.toList());
     }
 
     // ---------------- FETCH COURSE WITH CHAPTERS ----------------
