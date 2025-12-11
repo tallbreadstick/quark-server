@@ -37,10 +37,7 @@ public class ActivityProgressService {
 
         return activityProgressRepository.findByUserAndActivity(user, activity)
                 .orElseGet(() -> {
-                    ActivityProgress progress = ActivityProgress.builder()
-                            .user(user)
-                            .activity(activity)
-                            .build();
+                    ActivityProgress progress = new ActivityProgress(user, activity);
                     return activityProgressRepository.save(progress);
                 });
     }
@@ -60,10 +57,7 @@ public class ActivityProgressService {
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
         ActivityProgress progress = activityProgressRepository.findByUserAndActivity(user, activity)
-                .orElseGet(() -> ActivityProgress.builder()
-                        .user(user)
-                        .activity(activity)
-                        .build());
+                .orElseGet(() -> new ActivityProgress(user, activity));
 
         progress.setCompletedSections(completedSections);
         return activityProgressRepository.save(progress);
@@ -83,10 +77,7 @@ public class ActivityProgressService {
                 .orElseThrow(() -> new NoSuchElementException("Activity not found"));
 
         ActivityProgress progress = activityProgressRepository.findByUserAndActivity(user, activity)
-                .orElseGet(() -> ActivityProgress.builder()
-                        .user(user)
-                        .activity(activity)
-                        .build());
+                .orElseGet(() -> new ActivityProgress(user, activity));
 
         progress.setCompletedSections(progress.getCompletedSections() + 1);
         return activityProgressRepository.save(progress);

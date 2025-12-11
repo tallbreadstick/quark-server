@@ -19,7 +19,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ChapterProgress {
 
     @EmbeddedId
@@ -35,7 +34,6 @@ public class ChapterProgress {
     @JoinColumn(name = "chapter_id", nullable = false)
     private Chapter chapter;
 
-    @Builder
     public ChapterProgress(User user, Chapter chapter) {
         this.user = user;
         this.chapter = chapter;

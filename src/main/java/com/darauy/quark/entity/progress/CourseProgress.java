@@ -19,7 +19,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class CourseProgress {
 
     @EmbeddedId
@@ -38,7 +37,6 @@ public class CourseProgress {
     @Column(nullable = false)
     private Boolean enrolled;
 
-    @Builder
     public CourseProgress(User user, Course course) {
         this.user = user;
         this.course = course;

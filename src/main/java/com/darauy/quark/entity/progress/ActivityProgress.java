@@ -19,7 +19,6 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class ActivityProgress {
 
     @EmbeddedId
@@ -38,7 +37,6 @@ public class ActivityProgress {
     @Column(nullable = false)
     private Integer completedSections;
 
-    @Builder
     public ActivityProgress(User user, Activity activity) {
         this.user = user;
         this.activity = activity;

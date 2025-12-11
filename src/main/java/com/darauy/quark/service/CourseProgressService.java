@@ -40,11 +40,7 @@ public class CourseProgressService {
             throw new IllegalArgumentException("User is already enrolled in this course");
         }
 
-        CourseProgress progress = CourseProgress.builder()
-                .user(user)
-                .course(course)
-                .build();
-
+        CourseProgress progress = new CourseProgress(user, course);
         return courseProgressRepository.save(progress);
     }
 

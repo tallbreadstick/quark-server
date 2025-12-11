@@ -37,10 +37,7 @@ public class ChapterProgressService {
 
         return chapterProgressRepository.findByUserAndChapter(user, chapter)
                 .orElseGet(() -> {
-                    ChapterProgress progress = ChapterProgress.builder()
-                            .user(user)
-                            .chapter(chapter)
-                            .build();
+                    ChapterProgress progress = new ChapterProgress(user, chapter);
                     return chapterProgressRepository.save(progress);
                 });
     }
