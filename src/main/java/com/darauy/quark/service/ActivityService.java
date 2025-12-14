@@ -9,6 +9,8 @@ import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.repository.ActivityRepository;
 import com.darauy.quark.repository.ChapterRepository;
 import com.darauy.quark.repository.SectionRepository;
+import com.darauy.quark.repository.CourseProgressRepository;
+import com.darauy.quark.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +26,8 @@ public class ActivityService {
     private final ChapterRepository chapterRepository;
     private final ActivityRepository activityRepository;
     private final SectionRepository sectionRepository;
+    private final CourseProgressRepository courseProgressRepository;
+    private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
 
     // ------------------ Add Activity ------------------
@@ -168,6 +172,17 @@ public class ActivityService {
                         .max().orElse(0);
 
         return Math.max(maxLessonIdx, maxActivityIdx) + 1;
+    }
+
+    private boolean hasAccessToCourse(com.darauy.quark.entity.courses.Course course, Integer userId) {
+        boolean isOwner = course.getOwnerId().equals(userId);
+        if (isOwner) return true;
+        
+        var user = userRepository.findById(userId);
+        if (user.isEmpty()) return false;
+        
+        boolean isEnrolled = courseProgressRepository.findByUserAndCourse(user.get(), course).isPresent();
+        return isEnrolled;
     }
 
 }

@@ -6,6 +6,8 @@ import com.darauy.quark.entity.courses.lesson.Lesson;
 import com.darauy.quark.entity.courses.lesson.Page;
 import com.darauy.quark.repository.LessonRepository;
 import com.darauy.quark.repository.PageRepository;
+import com.darauy.quark.repository.CourseProgressRepository;
+import com.darauy.quark.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,8 @@ public class PageService {
 
     private final PageRepository pageRepository;
     private final LessonRepository lessonRepository;
+    private final CourseProgressRepository courseProgressRepository;
+    private final UserRepository userRepository;
 
     /** CREATE PAGE */
     public Page addPage(Integer lessonId, PageRequest req, Integer userId) {
@@ -79,21 +83,24 @@ public class PageService {
         pageRepository.saveAll(pages);
     }
 
-    /** FETCH PAGE CONTENT */
-    public PageContentResponse fetchPage(Integer pageId, Integer userId) {
+        /** FETCH PAGE CONTENT */
+        public PageContentResponse fetchPage(Integer pageId, Integer userId) {
 
         Page page = pageRepository.findById(pageId)
-                .orElseThrow(() -> new NoSuchElementException("Page not found"));
+            .orElseThrow(() -> new NoSuchElementException("Page not found"));
 
-        if (!page.getLesson().getChapter().getCourse().getOwnerId().equals(userId)) {
+        var user = userRepository.findById(userId)
+            .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (!canAccessCourse(page.getLesson().getChapter().getCourse(), user)) {
             throw new SecurityException("Unauthorized");
         }
 
         return PageContentResponse.builder()
-                .renderer(page.getRenderer())
-                .content(page.getContent())
-                .build();
-    }
+            .renderer(page.getRenderer())
+            .content(page.getContent())
+            .build();
+        }
 
     /** REORDER PAGES */
     @Transactional
@@ -125,5 +132,17 @@ public class PageService {
         }
 
         pageRepository.saveAll(pages);
+    }
+
+    private boolean canAccessCourse(com.darauy.quark.entity.courses.Course course, com.darauy.quark.entity.users.User user) {
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.EDUCATOR) {
+            return course.getOwnerId().equals(user.getId());
+        }
+
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.STUDENT) {
+            return courseProgressRepository.findByUserAndCourse(user, course).isPresent();
+        }
+
+        return false;
     }
 }

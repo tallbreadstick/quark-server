@@ -7,6 +7,7 @@ import com.darauy.quark.entity.courses.activity.Section;
 import com.darauy.quark.entity.users.User;
 import com.darauy.quark.repository.ActivityRepository;
 import com.darauy.quark.repository.SectionRepository;
+import com.darauy.quark.repository.CourseProgressRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ public class SectionService {
 
     private final SectionRepository sectionRepository;
     private final ActivityRepository activityRepository;
+    private final CourseProgressRepository courseProgressRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -108,7 +110,7 @@ public class SectionService {
         Section section = sectionRepository.findById(sectionId)
                 .orElseThrow(() -> new NoSuchElementException("Section not found"));
 
-        if (!section.getActivity().getChapter().getCourse().getOwnerId().equals(user.getId())) {
+        if (!canAccessCourse(section.getActivity().getChapter().getCourse(), user)) {
             throw new SecurityException("Unauthorized");
         }
 
@@ -133,5 +135,17 @@ public class SectionService {
                 .map(Section::getIdx)
                 .max(Integer::compare)
                 .orElse(0) + 1;
+    }
+
+    private boolean canAccessCourse(com.darauy.quark.entity.courses.Course course, User user) {
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.EDUCATOR) {
+            return course.getOwnerId().equals(user.getId());
+        }
+
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.STUDENT) {
+            return courseProgressRepository.findByUserAndCourse(user, course).isPresent();
+        }
+
+        return false;
     }
 }

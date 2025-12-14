@@ -171,6 +171,7 @@ public class CourseService {
             User user,
             Boolean myCourses,
             Boolean sharedWithMe,
+            Boolean enrolled,
             Boolean forkable,
             List<String> tags,
             String sortBy,
@@ -189,14 +190,11 @@ public class CourseService {
                 .map(cs -> cs.getCourse().getId())
                 .collect(Collectors.toSet());
 
-        // 4. Fetch enrolled courses for the user (if STUDENT)
-        Set<Integer> enrolledCourseIds = new HashSet<>();
-        if (user.getUserType() == User.UserType.STUDENT) {
-            List<CourseProgress> enrolledProgress = courseProgressRepository.findByUserAndEnrolledTrue(user);
-            enrolledCourseIds = enrolledProgress.stream()
-                    .map(cp -> cp.getCourse().getId())
-                    .collect(Collectors.toSet());
-        }
+        // 4. Fetch enrolled courses for the user
+        List<CourseProgress> enrolledProgress = courseProgressRepository.findByUserAndEnrolledTrue(user);
+        Set<Integer> enrolledCourseIds = enrolledProgress.stream()
+                .map(cp -> cp.getCourse().getId())
+                .collect(Collectors.toSet());
         final Set<Integer> enrolledIds = enrolledCourseIds; // For lambda access
 
         return allCourses.stream()
@@ -209,22 +207,13 @@ public class CourseService {
                     return isPublic || isOwner || isShared;
                 })
 
-                // 6. My courses - EDUCATOR: owned courses, STUDENT: enrolled courses
-                .filter(c -> {
-                    if (myCourses == null || !myCourses) return true;
-                    
-                    if (user.getUserType() == User.UserType.EDUCATOR) {
-                        // Educators: show owned courses
-                        return Objects.equals(c.getOwner().getId(), user.getId());
-                    } else {
-                        // Students: show enrolled courses
-                        return enrolledIds.contains(c.getId());
-                    }
-                })
-
-                // 7. Shared with me
+                // 6. Shared with me
                 .filter(c -> sharedWithMe == null || !sharedWithMe ||
                         sharedCourseIds.contains(c.getId()))
+
+                // 7. Enrolled
+                .filter(c -> enrolled == null || !enrolled ||
+                        enrolledIds.contains(c.getId()))
 
                 // 8. Forkable
                 .filter(c -> forkable == null ||
@@ -300,9 +289,12 @@ public class CourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NoSuchElementException("Course not found"));
 
-        // Check ownership or shared access
-        if (!course.getOwner().getId().equals(user.getId()) &&
-                courseSharedRepository.findByUserAndCourse(user, course).isEmpty()) {
+        // Check ownership, shared access, or enrollment
+        boolean isOwner = course.getOwner().getId().equals(user.getId());
+        boolean isShared = courseSharedRepository.findByUserAndCourse(user, course).isPresent();
+        boolean isEnrolled = courseProgressRepository.findByUserAndCourse(user, course).isPresent();
+        
+        if (!isOwner && !isShared && !isEnrolled) {
             throw new SecurityException("User cannot access this course");
         }
 
@@ -363,6 +355,13 @@ public class CourseService {
     }
 
     // ---------------- HELPER METHODS ----------------
+    private boolean hasAccessToCourse(Course course, User user) {
+        boolean isOwner = course.getOwner().getId().equals(user.getId());
+        boolean isShared = courseSharedRepository.findByUserAndCourse(user, course).isPresent();
+        boolean isEnrolled = courseProgressRepository.findByUserAndCourse(user, course).isPresent();
+        return isOwner || isShared || isEnrolled;
+    }
+
     private void validateCourseRequest(CourseRequest request) {
         if (request.getName() == null || request.getName().length() < 10 || request.getName().length() > 255) {
             throw new IllegalArgumentException("Course name must be between 10 and 255 characters");

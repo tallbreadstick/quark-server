@@ -136,6 +136,7 @@ public class CourseController {
             // Map query params to filter arguments
             Boolean myCourses = params.get("my_courses") != null ? Boolean.valueOf(params.get("my_courses")) : null;
             Boolean sharedWithMe = params.get("shared_with_me") != null ? Boolean.valueOf(params.get("shared_with_me")) : null;
+            Boolean enrolled = params.get("enrolled") != null ? Boolean.valueOf(params.get("enrolled")) : null;
             Boolean forkable = params.get("forkable") != null ? Boolean.valueOf(params.get("forkable")) : null;
             List<String> tags = params.get("tags") != null ?
                     Arrays.stream(params.get("tags").split(",")).map(String::trim).collect(Collectors.toList())
@@ -144,7 +145,7 @@ public class CourseController {
             String order = params.get("order");
             String search = params.get("search");
 
-            List<CourseFilterResponse> courses = courseService.fetchCoursesByFilter(user, myCourses, sharedWithMe, forkable, tags, sortBy, order, search);
+            List<CourseFilterResponse> courses = courseService.fetchCoursesByFilter(user, myCourses, sharedWithMe, enrolled, forkable, tags, sortBy, order, search);
             return ResponseEntity.ok(courses);
         } catch (NoSuchElementException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());

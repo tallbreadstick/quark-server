@@ -6,6 +6,9 @@ import com.darauy.quark.entity.courses.Chapter;
 import com.darauy.quark.entity.courses.Course;
 import com.darauy.quark.repository.ChapterRepository;
 import com.darauy.quark.repository.CourseRepository;
+import com.darauy.quark.repository.CourseProgressRepository;
+import com.darauy.quark.repository.CourseSharedRepository;
+import com.darauy.quark.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +21,9 @@ public class ChapterService {
 
     private final ChapterRepository chapterRepository;
     private final CourseRepository courseRepository;
+    private final CourseProgressRepository courseProgressRepository;
+    private final CourseSharedRepository courseSharedRepository;
+    private final UserRepository userRepository;
 
     // Add Chapter using ChapterRequest instead of raw Chapter
     public Chapter addChapter(Integer courseId, ChapterRequest request, Integer userId) {
@@ -117,8 +123,9 @@ public class ChapterService {
         // Copy activities into the chapter
         chapter.setActivities(chapterWithActivities.getActivities());
 
-        if (!chapter.getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this chapter's course");
+        // Check ownership or enrollment
+        if (!hasAccessToCourse(chapter.getCourse(), userId)) {
+            throw new SecurityException("User does not have access to this chapter's course");
         }
 
         // Map to DTO (same as before)
@@ -165,4 +172,15 @@ public class ChapterService {
     }
 
     // TODO: Reorder chapter items (activities/lessons) similar to reorderChapters
+
+    private boolean hasAccessToCourse(Course course, Integer userId) {
+        boolean isOwner = course.getOwnerId().equals(userId);
+        if (isOwner) return true;
+        
+        var user = userRepository.findById(userId);
+        if (user.isEmpty()) return false;
+        
+        boolean isEnrolled = courseProgressRepository.findByUserAndCourse(user.get(), course).isPresent();
+        return isEnrolled;
+    }
 }
