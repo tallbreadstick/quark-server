@@ -83,8 +83,8 @@ public class PageService {
         pageRepository.saveAll(pages);
     }
 
-        /** FETCH PAGE CONTENT */
-        public PageContentResponse fetchPage(Integer pageId, Integer userId) {
+    /** FETCH PAGE CONTENT */
+    public PageContentResponse fetchPage(Integer pageId, Integer userId) {
 
         Page page = pageRepository.findById(pageId)
             .orElseThrow(() -> new NoSuchElementException("Page not found"));
@@ -100,7 +100,7 @@ public class PageService {
             .renderer(page.getRenderer())
             .content(page.getContent())
             .build();
-        }
+    }
 
     /** REORDER PAGES */
     @Transactional

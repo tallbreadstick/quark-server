@@ -1,9 +1,9 @@
-# Test Case 1: Basic case with solution
+# Test Case 2: Different values
 from solution import Solution
 
 sol = Solution()
-result = sol.twoSum([2, 7, 11, 15], 9)
-status = result == [0, 1]
+result = sol.twoSum([3, 2, 4], 6)
+status = result == [1, 2]
 
 with open("out.txt", "w") as f:
     f.write("true" if status else "false")

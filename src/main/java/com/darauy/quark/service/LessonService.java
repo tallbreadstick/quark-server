@@ -98,8 +98,11 @@ public class LessonService {
         Lesson lesson = lessonRepository.findById(lessonId)
                 .orElseThrow(() -> new NoSuchElementException("Lesson not found"));
 
-        if (!lesson.getChapter().getCourse().getOwnerId().equals(userId)) {
-            throw new SecurityException("User does not own this lesson's chapter/course");
+        var user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("User not found"));
+
+        if (!canAccessCourse(lesson.getChapter().getCourse(), user)) {
+            throw new SecurityException("User does not have access to this lesson's course");
         }
 
         // Map Lesson -> LessonContentResponse
@@ -150,14 +153,15 @@ public class LessonService {
         return Math.max(maxLessonIdx, maxActivityIdx) + 1;
     }
 
-    private boolean hasAccessToCourse(com.darauy.quark.entity.courses.Course course, Integer userId) {
-        boolean isOwner = course.getOwnerId().equals(userId);
-        if (isOwner) return true;
-        
-        var user = userRepository.findById(userId);
-        if (user.isEmpty()) return false;
-        
-        boolean isEnrolled = courseProgressRepository.findByUserAndCourse(user.get(), course).isPresent();
-        return isEnrolled;
+    private boolean canAccessCourse(com.darauy.quark.entity.courses.Course course, com.darauy.quark.entity.users.User user) {
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.EDUCATOR) {
+            return course.getOwnerId().equals(user.getId());
+        }
+
+        if (user.getUserType() == com.darauy.quark.entity.users.User.UserType.STUDENT) {
+            return courseProgressRepository.findByUserAndCourse(user, course).isPresent();
+        }
+
+        return false;
     }
 }
